@@ -34,6 +34,9 @@ idea {
     }
 }
 
+// --fast (build.sh) trades shrinking for speed during iteration.
+def fastBuild = (findProperty("duskFastBuild") ?: "false").toString().toBoolean()
+
 def verName = APP_VERSION_NAME
 def verCode = Integer.parseInt(APP_VERSION_CODE)
 
@@ -255,8 +258,8 @@ android {
         release {
             debuggable false
             jniDebuggable false
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled !fastBuild
+            shrinkResources !fastBuild
             multiDexEnabled true
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             matchingFallbacks = ["release", "debug"]

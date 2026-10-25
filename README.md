@@ -85,6 +85,7 @@ git submodule update --init --recursive
 ./build.sh --native-only       # only rebuild libtmessages.49.so
 ./build.sh --force-native      # force a native rebuild (still no clean)
 ./build.sh --debug             # assembleDebug instead of assembleRelease
+./build.sh --fast              # iteration only: no R8, no lint (~2 min)
 ```
 
 How it stays fast:

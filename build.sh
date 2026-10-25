@@ -13,7 +13,9 @@
 #   ./build.sh --native-only       # only rebuild native libs
 #   ./build.sh --force-native      # force native rebuild (no clean)
 #   ./build.sh --debug             # assembleDebug instead of assembleRelease
+#   ./build.sh --fast              # iteration build: no R8, no lint (not for release)
 #   ./build.sh --status            # show state, build nothing
+#   ./build.sh --test              # build debug APK and post it to the private test group
 #   ./build.sh --send              # after building, post APKs to Telegram
 #   ./build.sh --send-only         # post existing APKs, build nothing
 #   ./build.sh --release           # also publish APKs as a GitHub Release
@@ -41,6 +43,8 @@ LIBS_DIR="$ROOT/TMessagesProj/src/main/libs"
 KEYSTORE="$ROOT/TMessagesProj/release.keystore"
 GRADLE_TASK_RELEASE="TMessagesProj:assembleRelease"
 GRADLE_TASK_DEBUG="TMessagesProj:assembleDebug"
+# Private group for test builds; the public channel is only used by --send.
+TEST_CHAT_ID="${TELEGRAM_TEST_CHAT_ID:--1004409331433}"
 
 # ----------------------------- args ----------------------------------------
 ABIS=()
@@ -48,9 +52,11 @@ DO_NATIVE=1
 DO_APK=1
 FORCE_NATIVE=0
 DEBUG_BUILD=0
+FAST_BUILD=0
 STATUS_ONLY=0
 DO_SEND=0
 DO_RELEASE=0
+DO_TEST=0
 BUMP=""
 
 usage() { sed -n '3,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0; }
@@ -62,7 +68,9 @@ while [[ $# -gt 0 ]]; do
     --native-only)   DO_APK=0; shift ;;
     --force-native)  FORCE_NATIVE=1; shift ;;
     --debug)         DEBUG_BUILD=1; shift ;;
+    --fast)          FAST_BUILD=1; shift ;;
     --status)        STATUS_ONLY=1; shift ;;
+    --test)          DO_TEST=1; DEBUG_BUILD=1; shift ;;
     --send)          DO_SEND=1; shift ;;
     --send-only)     DO_SEND=1; DO_NATIVE=0; DO_APK=0; shift ;;
     --release)       DO_RELEASE=1; shift ;;
@@ -73,6 +81,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ ${#ABIS[@]} -eq 0 ]] && ABIS=("${DEFAULT_ABIS[@]}")
+
+# A fast build is unshrunk and unsigned-for-release; never publish one.
+if [[ $FAST_BUILD -eq 1 && ( $DO_SEND -eq 1 || $DO_RELEASE -eq 1 ) ]]; then
+  echo "error: --fast cannot be combined with --send/--release; do a normal build to publish" >&2
+  exit 2
+fi
 
 # ----------------------------- helpers -------------------------------------
 c_ok()   { printf '\033[1;32m%s\033[0m\n' "$*"; }
@@ -258,8 +272,15 @@ if [[ $DO_APK -eq 1 ]]; then
   TASK="$GRADLE_TASK_RELEASE"
   [[ $DEBUG_BUILD -eq 1 ]] && TASK="$GRADLE_TASK_DEBUG"
 
+  GRADLE_ARGS=()
+  if [[ $FAST_BUILD -eq 1 ]]; then
+    GRADLE_ARGS+=("-PduskFastBuild=true" "-x" "lintVitalRelease" "-x" "lintVitalAnalyzeRelease" "-x" "lintVitalReportRelease")
+    c_warn "fast build: R8 and lint skipped, APK is bigger and not for release"
+  fi
+
   c_info "gradle $TASK (incremental, build-cache on)"
   ./gradlew "$TASK" \
+      "${GRADLE_ARGS[@]}" \
       --build-cache \
       --no-configuration-cache \
       --warning-mode=none \
@@ -273,6 +294,31 @@ if [[ $DO_APK -eq 1 ]]; then
     printf '    %s  (%s)\n' "$f" "$(du -h "$f" | cut -f1)"
   done
   c_ok "build finished"
+fi
+
+# ----------------------------- telegram ------------------------------------
+# ----------------------------- private test --------------------------------
+if [[ $DO_TEST -eq 1 ]]; then
+  APKS=()
+  while IFS= read -r f; do APKS+=("$f"); done < <(find "$OUT_DIR" -name '*debug*.apk' -type f 2>/dev/null | sort)
+  if [[ ${#APKS[@]} -eq 0 ]]; then
+    APKS=()
+    while IFS= read -r f; do APKS+=("$f"); done < <(find "$OUT_DIR" -name '*.apk' -type f 2>/dev/null | sort)
+  fi
+
+  if [[ ${#APKS[@]} -eq 0 ]]; then
+    c_warn "no APK found in $OUT_DIR, nothing to test"
+  else
+    VERSION="$(grep -m1 '^APP_VERSION_NAME=' "$ROOT/gradle.properties" 2>/dev/null | cut -d= -f2)"
+    CODE="$(grep -m1 '^APP_VERSION_CODE=' "$ROOT/gradle.properties" 2>/dev/null | cut -d= -f2)"
+    CAPTION="$(printf '<b>DuskGram %s — test build</b>\n\nDebug build, not a release. Verify before shipping.' "${VERSION:-?}")"
+    c_info "posting ${#APKS[@]} test APK(s) to the private group"
+    if [[ ! -x "$ROOT/scripts/tg-upload.sh" ]]; then
+      c_err "scripts/tg-upload.sh missing"
+    elif ! "$ROOT/scripts/tg-upload.sh" --chat "$TEST_CHAT_ID" --caption "$CAPTION" "${APKS[@]}"; then
+      c_warn "some uploads failed (see above)"
+    fi
+  fi
 fi
 
 # ----------------------------- telegram ------------------------------------

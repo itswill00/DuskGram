@@ -31,11 +31,13 @@ if [[ -f "$ROOT/.telegram.env" ]]; then
 fi
 
 CAPTION=""
+CHAT_OVERRIDE=""
 SEPARATE=0
 FILES=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --caption)  CAPTION="${2:?}"; shift 2 ;;
+    --chat)     CHAT_OVERRIDE="${2:?}"; shift 2 ;;
     --separate) SEPARATE=1; shift ;;
     *) FILES+=("$1"); shift ;;
   esac
@@ -53,6 +55,9 @@ fmt_size() {
 
 [[ ${#FILES[@]} -gt 0 ]] || { c_err "no files given"; exit 2; }
 [[ -n "${TELEGRAM_BOT_TOKEN:-}" ]] || { c_err "TELEGRAM_BOT_TOKEN not set"; exit 2; }
+if [[ -n "$CHAT_OVERRIDE" ]]; then
+  TELEGRAM_CHAT_ID="$CHAT_OVERRIDE"
+fi
 [[ -n "${TELEGRAM_CHAT_ID:-}" ]] || { c_err "TELEGRAM_CHAT_ID not set"; exit 2; }
 
 # Release posts are meant to stay minimal: one album, one short caption.

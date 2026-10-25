@@ -35,30 +35,65 @@ GitHub release
 If a release genuinely needs extra explanation (e.g. a signature change that
 forces a reinstall), add **one** short warning line. Nothing more.
 
-## 3. Publishing sequence
+## 3. Test first, publish second
+
+Never publish straight from an edit. Every change goes through a private test
+build first, and only reaches GitHub and the channel once it is verified.
 
 ```bash
+# 1. private test round
+./build.sh --test                # debug APK -> private group (DuskGram-CI)
+
+# 2. only after the test build is confirmed good
 ./build.sh --bump patch          # version only
-./build.sh --apk-only            # incremental build, never clean
+./build.sh --apk-only            # incremental release build, never clean
 ./build.sh --release-only        # GitHub release + assets
-./build.sh --send-only           # album post to the channel
+./build.sh --send-only           # album post to the public channel
 ```
 
-Then pin the album post and delete the previous release's post so the channel
-shows exactly one current release.
+Then pin the newest album post.
 
-## 4. Never clean
+**Never delete a release post that already shipped.** Older releases stay in the
+channel as an archive so users can roll back or re-download. Pinning is what
+marks the current build; deleting is not. (The one-time cleanup of the earliest
+1.0.1 posts happened before this rule and is not a precedent.)
+
+- `--test` always posts to the private group, never to the channel. It is a
+  debug build and must never be presented as a release.
+- Do not skip the test round because a change "looks safe".
+- `TELEGRAM_TEST_CHAT_ID` overrides the private group if it ever changes.
+
+## 4. Do not build repeatedly
+
+Builds take 5-6 minutes (2 with `--fast`), so they are not free. Do not run a
+build after every small edit.
+
+- Batch related changes, then build once when there is a real reason:
+  before publishing a release, or when a change carries genuine compile risk
+  (new file, unfamiliar API, cross-module signature change).
+- Several small edits in one file do not justify a build each time.
+- Never build "just to check" something that a grep or a read can answer.
+- When a build is genuinely needed, prefer `--fast` for iteration and save the
+  full R8 build for the release itself.
+
+## 5. Never clean
 
 All builds go through `./build.sh` and stay incremental. No `clean`, no
 `./gradlew clean`.
 
-## 5. Channel and credentials
+For quick iteration use `./build.sh --fast`, which skips R8 and lint
+(~2 min instead of ~6 min). A fast build is unshrunk and must never be
+published; `build.sh` refuses to combine `--fast` with `--send`/`--release`.
+Always finish with a normal build before releasing, because a fast build
+overwrites the APKs in the output directory.
+
+## 6. Channel and credentials
 
 - Channel: <https://t.me/duskgramclient> (`-1003266002885`)
 - Bot: `@nagramforkci_bot` (DuskGram-CI), channel administrator.
 - Credentials live in `.telegram.env`, which is gitignored. Never commit it.
 
-## 6. Commits
+## 7. Commits
 
 Author `itswill00 <anstykx00@gmail.com>`, with the trailer:
 
