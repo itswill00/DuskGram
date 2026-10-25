@@ -89,6 +89,15 @@ if [[ $FAST_BUILD -eq 1 && ( $DO_SEND -eq 1 || $DO_RELEASE -eq 1 ) ]]; then
 fi
 
 # ----------------------------- helpers -------------------------------------
+# Only the current release APKs belong in a public post or a GitHub release.
+# Debug APKs from --test and leftovers from older versions must never leak in.
+release_apks() {
+  local ver code
+  ver="$(grep -m1 '^APP_VERSION_NAME=' "$ROOT/gradle.properties" 2>/dev/null | cut -d= -f2)"
+  code="$(grep -m1 '^APP_VERSION_CODE=' "$ROOT/gradle.properties" 2>/dev/null | cut -d= -f2)"
+  find "$OUT_DIR/release" -maxdepth 1 -name "*-v${ver}-${code}-*.apk" -type f 2>/dev/null | sort
+}
+
 c_ok()   { printf '\033[1;32m%s\033[0m\n' "$*"; }
 c_info() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 c_warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*"; }
@@ -324,10 +333,10 @@ fi
 # ----------------------------- telegram ------------------------------------
 if [[ $DO_SEND -eq 1 ]]; then
   APKS=()
-  while IFS= read -r f; do APKS+=("$f"); done < <(find "$OUT_DIR" -name '*.apk' -type f 2>/dev/null | sort)
+  while IFS= read -r f; do APKS+=("$f"); done < <(release_apks)
 
   if [[ ${#APKS[@]} -eq 0 ]]; then
-    c_warn "no APK found in $OUT_DIR, nothing to send"
+    c_warn "no release APK for the current version, nothing to send"
   else
     # Keep the caption short: version, what changed, where to get it.
     VERSION="$(grep -m1 '^APP_VERSION_NAME=' "$ROOT/gradle.properties" 2>/dev/null | cut -d= -f2)"
@@ -360,10 +369,10 @@ fi
 # ----------------------------- github release ------------------------------
 if [[ $DO_RELEASE -eq 1 ]]; then
   APKS=()
-  while IFS= read -r f; do APKS+=("$f"); done < <(find "$OUT_DIR" -name '*.apk' -type f 2>/dev/null | sort)
+  while IFS= read -r f; do APKS+=("$f"); done < <(release_apks)
 
   if [[ ${#APKS[@]} -eq 0 ]]; then
-    c_warn "no APK found in $OUT_DIR, nothing to publish"
+    c_warn "no release APK for the current version, nothing to publish"
   elif ! command -v gh >/dev/null 2>&1; then
     c_err "gh CLI not found, cannot publish a release"
   else
