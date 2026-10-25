@@ -272,6 +272,7 @@ import tw.nekomimi.nekogram.helpers.remote.InlineBotRulesHelper;
 import tw.nekomimi.nekogram.helpers.remote.PagePreviewRulesHelper;
 import tw.nekomimi.nekogram.helpers.remote.PeerColorHelper;
 import tw.nekomimi.nekogram.helpers.remote.UpdateHelper;
+import tw.nekomimi.nekogram.utils.GithubUpdater;
 import tw.nekomimi.nekogram.helpers.remote.WallpaperHelper;
 import tw.nekomimi.nekogram.settings.NekoGhostModeActivity;
 import tw.nekomimi.nekogram.ui.BottomBuilder;
@@ -6171,50 +6172,14 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         if (!force && Math.abs(System.currentTimeMillis() - SharedConfig.lastUpdateCheckTime) < /* MessagesController.getInstance(0).updateCheckDelay */ updateCheckDelay) {
             return;
         }
-        final TLRPC.TL_help_getAppUpdate req = new TLRPC.TL_help_getAppUpdate();
-        try {
-            req.source = ApplicationLoader.applicationContext.getPackageManager().getInstallerPackageName(ApplicationLoader.applicationContext.getPackageName());
-        } catch (Exception ignore) {
-
-        }
-        if (req.source == null) {
-            req.source = "";
-        }
-        final int accountNum = currentAccount;
+        SharedConfig.lastUpdateCheckTime = System.currentTimeMillis();
+        SharedConfig.saveConfig();
         if (progress != null) progress.init();
-        UpdateHelper.getInstance().checkNewVersionAvailable((res, error) -> {
-            SharedConfig.lastUpdateCheckTime = System.currentTimeMillis();
-            SharedConfig.saveConfig();
-            AndroidUtilities.runOnUIThread(() -> {
-                if (res != null) {
-                    SharedConfig.setNewAppVersionAvailable(res);
-                    if (res.can_not_skip) {
-                        showUpdateActivity(accountNum, res, false);
-                    } else {
-                        ApplicationLoader.applicationLoaderInstance.showUpdateAppPopup(LaunchActivity.this, res, accountNum);
-                    }
-                } else {
-                    if (force) {
-                        BaseFragment fragment = getLastFragment();
-                        if (fragment != null) {
-                            if (error == null) {
-                                BulletinFactory.of(fragment).createSimpleBulletin(R.raw.chats_infotip, LocaleController.getString(R.string.YourVersionIsLatest)).show();
-                            } else {
-                                AlertsCreator.createSimpleAlert(this, LocaleController.getString("ErrorOccurred", R.string.ErrorOccurred) + "\n" + error).show();
-                            }
-                        }
-                    }
-                    SharedConfig.setNewAppVersionAvailable(null);
-                }
-                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
-                if (progress != null) {
-                    progress.end();
-                }
-            });
-        }, updateAlways);
-        if (progress != null) {
-            progress.init();
-        }
+        GithubUpdater.INSTANCE.checkForUpdates(this, !force, () -> {
+            if (progress != null) {
+                progress.end();
+            }
+        });
     }
 
     public Dialog showAlertDialog(AlertDialog.Builder builder) {

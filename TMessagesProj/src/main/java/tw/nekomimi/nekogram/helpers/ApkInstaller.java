@@ -107,6 +107,21 @@ public final class ApkInstaller {
         if (apk == null) {
             return;
         }
+        installUpdate(context, apk);
+    }
+
+    /**
+     * Installs an APK that is already on disk, e.g. one fetched by the in-app
+     * updater. Shares the same session/progress UI as the Telegram-based path.
+     */
+    public static void installUpdate(Activity context, File apk) {
+        if (context == null || apk == null || !apk.exists()) {
+            return;
+        }
+        if (XiaomiUtilities.isMIUI()) {
+            AndroidUtilities.openForView(apk, "install.apk", "application/vnd.android.package-archive", context, null, false);
+            return;
+        }
         if (dialog != null && dialog.isShowing()) {
             return;
         }

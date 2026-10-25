@@ -216,6 +216,9 @@ bump_version() {
 
   sed -i "s/^APP_VERSION_NAME=.*/APP_VERSION_NAME=$newname/" "$props"
   sed -i "s/^APP_VERSION_CODE=.*/APP_VERSION_CODE=$newcode/" "$props"
+  # BuildConfig.BUILD_TIMESTAMP feeds the in-app updater, so it has to move
+  # with every release or two builds of the same version look identical.
+  sed -i "s/^APP_BUILD_TIMESTAMP=.*/APP_BUILD_TIMESTAMP=$(date +%s000)/" "$props"
   c_ok "version bumped: $name ($code) -> $newname ($newcode)"
 }
 
