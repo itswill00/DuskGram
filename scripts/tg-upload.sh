@@ -55,6 +55,16 @@ fmt_size() {
 [[ -n "${TELEGRAM_BOT_TOKEN:-}" ]] || { c_err "TELEGRAM_BOT_TOKEN not set"; exit 2; }
 [[ -n "${TELEGRAM_CHAT_ID:-}" ]] || { c_err "TELEGRAM_CHAT_ID not set"; exit 2; }
 
+# Release posts are meant to stay minimal: one album, one short caption.
+# Flag anything that looks like the old wall-of-text post.
+if [[ -n "$CAPTION" ]]; then
+  CAP_LINES=$(printf '%s\n' "$CAPTION" | wc -l)
+  CAP_CHARS=${#CAPTION}
+  if (( CAP_LINES > 10 || CAP_CHARS > 400 )); then
+    c_warn "caption is ${CAP_LINES} lines / ${CAP_CHARS} chars; release posts should stay minimal (see AGENTS.md)"
+  fi
+fi
+
 # pick API base: local server if healthy, else cloud
 API="https://api.telegram.org"
 LIMIT=$CLOUD_LIMIT
@@ -79,6 +89,7 @@ for f in "${FILES[@]}"; do
 done
 
 [[ ${#SEND[@]} -gt 0 ]] || { c_err "nothing to upload"; exit 1; }
+
 
 # json_escape: minimal escaping for the caption inside the media JSON
 json_escape() {
