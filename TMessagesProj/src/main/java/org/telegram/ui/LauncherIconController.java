@@ -34,7 +34,10 @@ public class LauncherIconController {
     }
 
     public enum LauncherIcon {
-        DEFAULT("DefaultIcon", R.mipmap.ic_launcher_nagram, R.mipmap.icon_background_nagram, R.string.AppIconDefault);
+        DEFAULT("DefaultIcon", R.mipmap.ic_launcher_nagram, R.mipmap.icon_background_nagram, R.string.AppIconDefault),
+        MIDNIGHT("MidnightIcon", R.mipmap.icon_background_duskgram_midnight, R.mipmap.icon_foreground_duskgram_midnight, R.string.AppIconMidnight),
+        EMBER("EmberIcon", R.mipmap.icon_background_duskgram_ember, R.mipmap.icon_foreground_duskgram_ember, R.string.AppIconEmber),
+        FOREST("ForestIcon", R.mipmap.icon_background_duskgram_forest, R.mipmap.icon_foreground_duskgram_forest, R.string.AppIconForest);
 
         public final String key;
         public final int background;

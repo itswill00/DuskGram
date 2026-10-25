@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# Nagram smart incremental build
+# DuskGram smart incremental build
 #
 # Never cleans. Only rebuilds what actually changed:
 #   * native (.so)  -> only if jni sources / submodules / patches changed
@@ -16,6 +16,8 @@
 #   ./build.sh --status            # show state, build nothing
 #   ./build.sh --send              # after building, post APKs to Telegram
 #   ./build.sh --send-only         # post existing APKs, build nothing
+#   ./build.sh --release           # also publish APKs as a GitHub Release
+#   ./build.sh --release-only      # publish existing APKs, build nothing
 #
 # Telegram: credentials come from .telegram.env (gitignored) or the
 # environment (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID). A local Bot API server
@@ -46,8 +48,9 @@ FORCE_NATIVE=0
 DEBUG_BUILD=0
 STATUS_ONLY=0
 DO_SEND=0
+DO_RELEASE=0
 
-usage() { sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0; }
+usage() { sed -n '3,22p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -59,6 +62,8 @@ while [[ $# -gt 0 ]]; do
     --status)        STATUS_ONLY=1; shift ;;
     --send)          DO_SEND=1; shift ;;
     --send-only)     DO_SEND=1; DO_NATIVE=0; DO_APK=0; shift ;;
+    --release)       DO_RELEASE=1; shift ;;
+    --release-only)  DO_RELEASE=1; DO_NATIVE=0; DO_APK=0; shift ;;
     -h|--help)       usage ;;
     *) echo "unknown option: $1" >&2; usage ;;
   esac
@@ -251,7 +256,7 @@ if [[ $DO_SEND -eq 1 ]]; then
     BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
     SUBJECT="$(git log -1 --pretty=%s 2>/dev/null || true)"
 
-    CAPTION="$(printf '<b>Nagram fork build</b>\nversion: <code>%s</code> (%s)\nbranch: <code>%s</code>\ncommit: <code>%s</code>' \
+    CAPTION="$(printf '<b>DuskGram build</b>\nversion: <code>%s</code> (%s)\nbranch: <code>%s</code>\ncommit: <code>%s</code>' \
       "${VERSION:-?}" "${CODE:-?}" "$BRANCH" "$SHA")"
     if [[ -n "$SUBJECT" ]]; then
       CAPTION+="$(printf '\nlast: %s' "$SUBJECT")"
@@ -263,6 +268,40 @@ if [[ $DO_SEND -eq 1 ]]; then
       c_err "scripts/tg-upload.sh missing"
     elif ! "$ROOT/scripts/tg-upload.sh" --caption "$CAPTION" "${APKS[@]}"; then
       c_warn "some uploads failed (see above); build output is still valid"
+    fi
+  fi
+fi
+
+# ----------------------------- github release ------------------------------
+if [[ $DO_RELEASE -eq 1 ]]; then
+  APKS=()
+  while IFS= read -r f; do APKS+=("$f"); done < <(find "$OUT_DIR" -name '*.apk' -type f 2>/dev/null | sort)
+
+  if [[ ${#APKS[@]} -eq 0 ]]; then
+    c_warn "no APK found in $OUT_DIR, nothing to publish"
+  elif ! command -v gh >/dev/null 2>&1; then
+    c_err "gh CLI not found, cannot publish a release"
+  else
+    VERSION="$(grep -m1 '^APP_VERSION_NAME=' "$ROOT/gradle.properties" | cut -d= -f2)"
+    CODE="$(grep -m1 '^APP_VERSION_CODE=' "$ROOT/gradle.properties" | cut -d= -f2)"
+    SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    TAG="v${VERSION}-${CODE}"
+
+    NOTES="$(printf 'DuskGram %s (build %s)\n\ncommit: %s\n\n' "${VERSION:-?}" "${CODE:-?}" "$SHA")"
+    NOTES+="$(git log -1 --pretty='%s' 2>/dev/null || true)"
+
+    c_info "publishing GitHub release $TAG"
+    if gh release view "$TAG" >/dev/null 2>&1; then
+      c_info "release $TAG exists, uploading assets (clobber)"
+      if gh release upload "$TAG" "${APKS[@]}" --clobber; then
+        c_ok "assets updated on release $TAG"
+      else
+        c_warn "uploading assets failed"
+      fi
+    elif gh release create "$TAG" "${APKS[@]}" --title "DuskGram $VERSION ($CODE)" --notes "$NOTES"; then
+      c_ok "release $TAG published"
+    else
+      c_warn "creating release $TAG failed"
     fi
   fi
 fi
