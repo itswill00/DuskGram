@@ -134,4 +134,8 @@ public class ConfigCellTextInput extends AbstractConfigCell {
         builder.setView(linearLayout);
         cellGroup.thisFragment.showDialog(builder.create());
     }
+
+    public String getTitle() {
+        return title;
+    }
 }

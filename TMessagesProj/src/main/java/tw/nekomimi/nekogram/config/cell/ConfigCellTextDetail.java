@@ -43,4 +43,8 @@ public class ConfigCellTextDetail extends AbstractConfigCell {
         TextDetailSettingsCell cell = (TextDetailSettingsCell) holder.itemView;
         cell.setTextAndValue(title, StrUtil.isNotBlank(bindConfig.String()) ? bindConfig.String() : hint, cellGroup.needSetDivider(this));
     }
+
+    public String getTitle() {
+        return title;
+    }
 }

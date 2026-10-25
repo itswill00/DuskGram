@@ -75,4 +75,8 @@ public class ConfigCellAutoTextCheck extends AbstractConfigCell {
             if (onClick != null) onClick.accept(cell.isChecked());
         }
     }
+
+    public String getTitle() {
+        return title;
+    }
 }

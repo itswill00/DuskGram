@@ -147,4 +147,8 @@ public class ConfigCellSelectBox extends AbstractConfigCell {
 
 
     }
+
+    public String getTitle() {
+        return title;
+    }
 }

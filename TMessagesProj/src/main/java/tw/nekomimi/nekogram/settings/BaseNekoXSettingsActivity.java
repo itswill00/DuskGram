@@ -35,6 +35,7 @@ import org.telegram.ui.Components.UndoView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 
@@ -152,6 +153,60 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
             return ((ConfigCellAutoTextCheck) row).getBindConfig();
         }
         return null;
+    }
+
+    /**
+     * Every row that can be reached by the global settings search, keyed by the
+     * id used to scroll back to it. Headers and dividers carry no setting, so
+     * they are skipped; every real row contributes its own title.
+     */
+    public LinkedHashMap<String, AbstractConfigCell> getSearchRows() {
+        LinkedHashMap<String, AbstractConfigCell> rows = new LinkedHashMap<>();
+        if (cellGroup == null || cellGroup.rows == null) {
+            return rows;
+        }
+        for (AbstractConfigCell row : cellGroup.rows) {
+            if (row == null) continue;
+            int type = row.getType();
+            if (type == CellGroup.ITEM_TYPE_HEADER || type == CellGroup.ITEM_TYPE_DIVIDER) {
+                continue;
+            }
+            String key = getRowKey(row);
+            if (key != null) {
+                rows.put(key, row);
+            }
+        }
+        return rows;
+    }
+
+    /** Titles a row can be found by in the global search. */
+    public java.util.List<CharSequence> getSearchTitles(AbstractConfigCell row) {
+        java.util.List<CharSequence> titles = new java.util.ArrayList<>(1);
+        CharSequence title = null;
+        if (row instanceof ConfigCellTextCheck) {
+            title = ((ConfigCellTextCheck) row).getTitle();
+        } else if (row instanceof ConfigCellSelectBox) {
+            title = ((ConfigCellSelectBox) row).getTitle();
+        } else if (row instanceof ConfigCellTextDetail) {
+            title = ((ConfigCellTextDetail) row).getTitle();
+        } else if (row instanceof ConfigCellTextInput) {
+            title = ((ConfigCellTextInput) row).getTitle();
+        } else if (row instanceof ConfigCellAutoTextCheck) {
+            title = ((ConfigCellAutoTextCheck) row).getTitle();
+        }
+        if (title == null) {
+            String key = getRowKey(row);
+            if (key != null) {
+                try {
+                    title = LocaleController.getString(key);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        if (title != null && title.length() > 0 && !title.toString().startsWith("LOC_ERR")) {
+            titles.add(title);
+        }
+        return titles;
     }
 
     protected String getRowKey(AbstractConfigCell row) {

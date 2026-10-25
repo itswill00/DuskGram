@@ -17,6 +17,7 @@ import java.util.Map;
 import tw.nekomimi.nekogram.ChatHistoryActivity;
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
 import tw.nekomimi.nekogram.settings.BaseNekoXSettingsActivity;
+import tw.nekomimi.nekogram.config.cell.AbstractConfigCell;
 import tw.nekomimi.nekogram.settings.NekoChatSettingsActivity;
 import tw.nekomimi.nekogram.settings.NekoAccountSettingsActivity;
 import tw.nekomimi.nekogram.settings.NekoDebugSettingsActivity;
@@ -68,6 +69,10 @@ public class SettingsHelper {
                 case "experimental":
                 case "e":
                     fragment = nekox_fragment = new NekoExperimentalSettingsActivity();
+                    break;
+                case "ghostmode":
+                case "ghost":
+                    fragment = neko_fragment = new NekoGhostModeActivity();
                     break;
                 case "emoji":
                     fragment = neko_fragment = new NekoEmojiSettingsActivity();
@@ -135,35 +140,33 @@ public class SettingsHelper {
         xFragments.add(new NekoAccountSettingsActivity());
 
         for (BaseNekoXSettingsActivity fragment : xFragments) {
-            int base = fragment.getBaseGuid();
             int drawable = fragment.getDrawable();
             String page = fragment.getTitle();
-            for (Map.Entry<Integer, String> entry : fragment.getRowMapReverse().entrySet()) {
-                Integer i = entry.getKey();
-                String key = entry.getValue();
-                // Rows without a config binding are stored as their index; skip them.
-                if (key == null || key.equals(String.valueOf(i))) {
-                    continue;
+            int guid = fragment.getBaseGuid();
+
+            // The page itself is reachable even before searching for a single row.
+            if (!TextUtils.isEmpty(page)) {
+                BaseFragment pageFragment = fragment;
+                items.add(new SettingsSearchResult(guid, page, section, null, drawable,
+                        () -> callback.presentFragment(pageFragment)));
+            }
+
+            // Each row contributes its own title, so custom-titled rows are found too.
+            for (Map.Entry<String, AbstractConfigCell> entry : fragment.getSearchRows().entrySet()) {
+                String key = entry.getKey();
+                for (CharSequence title : fragment.getSearchTitles(entry.getValue())) {
+                    guid++;
+                    String openTitle = title.toString();
+                    Runnable open = () -> {
+                        try {
+                            BaseNekoXSettingsActivity f = fragment.getClass().getDeclaredConstructor().newInstance();
+                            callback.presentFragment(f);
+                            AndroidUtilities.runOnUIThread(() -> f.scrollToRow(key, () -> {}));
+                        } catch (Exception ignored) {
+                        }
+                    };
+                    items.add(new SettingsSearchResult(guid, openTitle, section, page, drawable, open));
                 }
-                String title;
-                try {
-                    title = LocaleController.getString(key);
-                } catch (Exception e) {
-                    continue;
-                }
-                if (TextUtils.isEmpty(title) || title.startsWith("LOC_ERR")) {
-                    continue;
-                }
-                int guid = base + i;
-                Runnable open = () -> {
-                    try {
-                        BaseNekoXSettingsActivity f = fragment.getClass().getDeclaredConstructor().newInstance();
-                        callback.presentFragment(f);
-                        AndroidUtilities.runOnUIThread(() -> f.scrollToRow(key, () -> {}));
-                    } catch (Exception ignored) {
-                    }
-                };
-                items.add(new SettingsSearchResult(guid, title, section, page, drawable, open));
             }
         }
 

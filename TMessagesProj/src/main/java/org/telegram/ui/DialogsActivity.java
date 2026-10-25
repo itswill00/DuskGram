@@ -13839,6 +13839,18 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
     }
 
+    /** Drawer label for Ghost Mode; appends the current state when enabled. */
+    private String ghostDrawerTitle() {
+        String base = getString(R.string.GhostMode);
+        if (!NekoConfig.showGhostModeStatus) {
+            return base;
+        }
+        String state = NekoConfig.isGhostModeActive()
+                ? getString(R.string.GhostModeOn)
+                : getString(R.string.GhostModeOff);
+        return base + " \u00b7 " + state;
+    }
+
     private void showItemOptions() {
         ItemOptions io = ItemOptions.makeOptions(this, optionsItem);
         io.setColors(getThemedColor(Theme.key_actionBarDefaultTitle), getThemedColor(Theme.key_actionBarDefaultTitle));
@@ -13947,7 +13959,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             args.putLong("user_id", UserConfig.getInstance(currentAccount).getClientUserId());
             presentFragment(new ChatActivity(args));
         });
-        io.addIf(NekoConfig.showGhostToggleInDrawer, R.drawable.icon_ghost, getString(R.string.GhostMode), () -> {
+        io.addIf(NekoConfig.showGhostToggleInDrawer, R.drawable.icon_ghost, ghostDrawerTitle(), () -> {
             presentFragment(new NekoGhostModeActivity());
         });
         if (ApplicationLoader.applicationLoaderInstance != null) {

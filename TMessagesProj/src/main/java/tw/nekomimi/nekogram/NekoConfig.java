@@ -34,6 +34,14 @@ public class NekoConfig {
     public static boolean sendReadStoryPackets;
     public static boolean markReadAfterSend;
     public static boolean showGhostToggleInDrawer;
+    // Locked flags stay enforced even when Ghost Mode is switched off, so a
+    // single toggle cannot accidentally reveal activity.
+    public static boolean sendReadMessagePacketsLocked;
+    public static boolean sendOnlinePacketsLocked;
+    public static boolean sendUploadProgressLocked;
+    public static boolean sendReadStoryPacketsLocked;
+    public static boolean sendOfflineAfterOnlineLocked;
+    public static boolean showGhostModeStatus;
     public static final String channelAliasPrefix = "channelAliasPrefix_";
 
     private static boolean configLoaded = false;
@@ -297,6 +305,12 @@ public class NekoConfig {
             markReadAfterSend = preferences.getBoolean("markReadAfterSend", true);
             // ~ Ghost other options
             showGhostToggleInDrawer = preferences.getBoolean("showGhostToggleInDrawer", false);
+            sendReadMessagePacketsLocked = preferences.getBoolean("sendReadMessagePacketsLocked", false);
+            sendOnlinePacketsLocked = preferences.getBoolean("sendOnlinePacketsLocked", false);
+            sendUploadProgressLocked = preferences.getBoolean("sendUploadProgressLocked", false);
+            sendReadStoryPacketsLocked = preferences.getBoolean("sendReadStoryPacketsLocked", false);
+            sendOfflineAfterOnlineLocked = preferences.getBoolean("sendOfflineAfterOnlineLocked", false);
+            showGhostModeStatus = preferences.getBoolean("showGhostModeStatus", false);
 
             NkmrConfig.compact();
             configLoaded = true;
@@ -317,6 +331,52 @@ public class NekoConfig {
                 .putBoolean("sendReadStoryPackets", sendReadStoryPackets)
                 .putBoolean("sendOfflineAfterOnline", sendOfflineAfterOnline)
                 .apply();
+    }
+
+    /**
+     * Effective suppression flags. A locked option keeps hiding activity even
+     * after Ghost Mode is turned off, which is what makes the lock useful.
+     */
+    public static boolean suppressReadMessages() {
+        return !sendReadMessagePackets || sendReadMessagePacketsLocked;
+    }
+
+    public static boolean suppressOnline() {
+        return !sendOnlinePackets || sendOnlinePacketsLocked;
+    }
+
+    public static boolean suppressUploadProgress() {
+        return !sendUploadProgress || sendUploadProgressLocked;
+    }
+
+    public static boolean suppressReadStories() {
+        return !sendReadStoryPackets || sendReadStoryPacketsLocked;
+    }
+
+    public static boolean suppressOfflineAfterOnline() {
+        return sendOfflineAfterOnline || sendOfflineAfterOnlineLocked;
+    }
+
+    public static void setGhostLocked(String key, boolean value) {
+        switch (key) {
+            case "sendReadMessagePacketsLocked": sendReadMessagePacketsLocked = value; break;
+            case "sendOnlinePacketsLocked": sendOnlinePacketsLocked = value; break;
+            case "sendUploadProgressLocked": sendUploadProgressLocked = value; break;
+            case "sendReadStoryPacketsLocked": sendReadStoryPacketsLocked = value; break;
+            case "sendOfflineAfterOnlineLocked": sendOfflineAfterOnlineLocked = value; break;
+        }
+        preferences.edit().putBoolean(key, value).apply();
+    }
+
+    public static boolean isGhostLocked(String key) {
+        switch (key) {
+            case "sendReadMessagePacketsLocked": return sendReadMessagePacketsLocked;
+            case "sendOnlinePacketsLocked": return sendOnlinePacketsLocked;
+            case "sendUploadProgressLocked": return sendUploadProgressLocked;
+            case "sendReadStoryPacketsLocked": return sendReadStoryPacketsLocked;
+            case "sendOfflineAfterOnlineLocked": return sendOfflineAfterOnlineLocked;
+        }
+        return false;
     }
 
     public static void putBoolean(String key, boolean value) {

@@ -383,6 +383,16 @@
     <string name="DuskGramUpdateDownloadFailed">Could not download the update.</string>
     <string name="DuskGramUpdateCheckFailed">Could not check for updates.</string>
     <string name="DuskSettingsSearch">Search settings</string>
+    <!-- Ghost Mode: locked options stay enforced while Ghost Mode is off -->
+    <string name="GhostLockedElements">Always hidden</string>
+    <string name="LockDontReadMessages">Always hide read receipts</string>
+    <string name="LockDontSendOnlinePackets">Always stay offline</string>
+    <string name="LockDontSendUploadProgress">Always hide typing</string>
+    <string name="LockDontReadStories">Always hide story views</string>
+    <string name="LockSendOfflinePacketAfterOnline">Always go offline after sending</string>
+    <string name="ShowGhostModeStatus">Show Ghost Mode status</string>
+    <string name="GhostModeOn">on</string>
+    <string name="GhostModeOff">off</string>
     <string name="MessagePreviewText">since i want the code to be terrible i am ||vibe-coding||</string>
     <string name="MessagePreviewPollQuestion">How is the code?</string>
     <string name="MessagePreviewPollAnswerTerrible">Terrible</string>
