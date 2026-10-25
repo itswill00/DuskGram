@@ -18,6 +18,8 @@
 #   ./build.sh --send-only         # post existing APKs, build nothing
 #   ./build.sh --release           # also publish APKs as a GitHub Release
 #   ./build.sh --release-only      # publish existing APKs, build nothing
+#   ./build.sh --bump [patch|minor|major]
+#                                  # bump version first, then build
 #
 # Telegram: credentials come from .telegram.env (gitignored) or the
 # environment (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID). A local Bot API server
@@ -49,8 +51,9 @@ DEBUG_BUILD=0
 STATUS_ONLY=0
 DO_SEND=0
 DO_RELEASE=0
+BUMP=""
 
-usage() { sed -n '3,22p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0; }
+usage() { sed -n '3,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -64,6 +67,7 @@ while [[ $# -gt 0 ]]; do
     --send-only)     DO_SEND=1; DO_NATIVE=0; DO_APK=0; shift ;;
     --release)       DO_RELEASE=1; shift ;;
     --release-only)  DO_RELEASE=1; DO_NATIVE=0; DO_APK=0; shift ;;
+    --bump)          BUMP="${2:-patch}"; shift 2 ;;
     -h|--help)       usage ;;
     *) echo "unknown option: $1" >&2; usage ;;
   esac
@@ -191,6 +195,33 @@ if [[ $STATUS_ONLY -eq 1 ]]; then show_status; exit 0; fi
 # ----------------------------- lock ----------------------------------------
 exec 9>"$CACHE_DIR/.lock"
 flock -n 9 || die "another build.sh is already running"
+
+# ----------------------------- version bump --------------------------------
+bump_version() {
+  local kind="${1:-patch}"
+  local props="$ROOT/gradle.properties"
+  local name code
+  name="$(grep -m1 '^APP_VERSION_NAME=' "$props" | cut -d= -f2)"
+  code="$(grep -m1 '^APP_VERSION_CODE=' "$props" | cut -d= -f2)"
+
+  IFS=. read -r major minor patch <<< "$name"
+  case "$kind" in
+    major) major=$((major+1)); minor=0; patch=0 ;;
+    minor) minor=$((minor+1)); patch=0 ;;
+    patch) patch=$((patch+1)) ;;
+    *) die "unknown bump kind: $kind (use patch|minor|major)" ;;
+  esac
+  local newname="${major}.${minor}.${patch}"
+  local newcode=$((code+1))
+
+  sed -i "s/^APP_VERSION_NAME=.*/APP_VERSION_NAME=$newname/" "$props"
+  sed -i "s/^APP_VERSION_CODE=.*/APP_VERSION_CODE=$newcode/" "$props"
+  c_ok "version bumped: $name ($code) -> $newname ($newcode)"
+}
+
+if [[ -n "$BUMP" ]]; then
+  bump_version "$BUMP"
+fi
 
 # ----------------------------- native --------------------------------------
 if [[ $DO_NATIVE -eq 1 ]]; then

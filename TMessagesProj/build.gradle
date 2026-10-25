@@ -35,11 +35,13 @@ idea {
 }
 
 def verName = APP_VERSION_NAME
-def verCode = 1255
+def verCode = Integer.parseInt(APP_VERSION_CODE)
 
-
-def officialVer = APP_VERSION_NAME
-def officialCode = APP_VERSION_CODE
+// Upstream Telegram version this fork is based on. Kept separate from the
+// fork's own version so the updater can still compare against official
+// Telegram releases.
+def officialVer = UPSTREAM_VERSION_NAME
+def officialCode = Integer.parseInt(UPSTREAM_VERSION_CODE)
 
 def serviceAccountCredentialsFile = rootProject.file("service_account_credentials.json")
 
