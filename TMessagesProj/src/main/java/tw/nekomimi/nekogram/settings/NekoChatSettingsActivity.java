@@ -445,6 +445,11 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
     }
 
     @Override
+    public int getBaseGuid() {
+        return 14000;
+    }
+
+    @Override
     public int getDrawable() {
         return R.drawable.menu_chats;
     }

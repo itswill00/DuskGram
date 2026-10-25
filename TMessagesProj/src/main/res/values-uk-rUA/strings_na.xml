@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="N_Config">N-конфігурації</string>
+    <string name="N_Config">Dusk Settings</string>
     <string name="ForceCopy">Примусова копія</string>
     <string name="disableSecondAddress">Вимкнути другий адресний запит</string>
     <string name="InvertReply">Invert</string>

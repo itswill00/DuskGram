@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="N_Config">N-Configuração</string>
+    <string name="N_Config">Dusk Settings</string>
     <string name="ForceCopy">Forçar Cópia</string>
     <string name="disableSecondAddress">Desativar Requisição de Segundo Endereço</string>
     <string name="InvertReply">Invert</string>

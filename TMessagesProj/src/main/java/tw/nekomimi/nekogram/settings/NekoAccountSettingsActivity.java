@@ -181,6 +181,17 @@ public class NekoAccountSettingsActivity extends BaseNekoXSettingsActivity {
         }
     }
 
+    @Override
+    public int getBaseGuid() {
+        return 15000;
+    }
+
+    @Override
+    public int getDrawable() {
+        return R.drawable.msg_settings;
+    }
+
+    @Override
     public String getTitle() {
         return LocaleController.getString(R.string.Account);
     }

@@ -20,9 +20,10 @@ import tw.nekomimi.nekogram.settings.BaseNekoXSettingsActivity;
 import tw.nekomimi.nekogram.settings.NekoChatSettingsActivity;
 import tw.nekomimi.nekogram.settings.NekoAccountSettingsActivity;
 import tw.nekomimi.nekogram.settings.NekoDebugSettingsActivity;
-import tw.nekomimi.nekogram.settings.NekoEmojiSettingsActivity;
 import tw.nekomimi.nekogram.settings.NekoExperimentalSettingsActivity;
 import tw.nekomimi.nekogram.settings.NekoGeneralSettingsActivity;
+import tw.nekomimi.nekogram.settings.NekoEmojiSettingsActivity;
+import tw.nekomimi.nekogram.settings.NekoGhostModeActivity;
 import tw.nekomimi.nekogram.settings.NekoPasscodeSettingsActivity;
 import tw.nekomimi.nekogram.settings.NekoSettingsActivity;
 import xyz.nextalone.nagram.network.NetworkLogActivity;
@@ -123,40 +124,79 @@ public class SettingsHelper {
 
     public static ArrayList<SettingsSearchResult> onCreateSearchArray(Callback callback) {
         ArrayList<SettingsSearchResult> items = new ArrayList<>();
-        ArrayList<BaseNekoXSettingsActivity> fragments = new ArrayList<>();
-        fragments.add(new NekoGeneralSettingsActivity());
-        fragments.add(new NekoChatSettingsActivity());
-        fragments.add(new NekoExperimentalSettingsActivity());
-        fragments.add(new NekoDebugSettingsActivity());
-        String n_title = LocaleController.getString(R.string.N_Config);
-        for (BaseNekoXSettingsActivity fragment: fragments) {
-            int uid = fragment.getBaseGuid();
+        String section = LocaleController.getString(R.string.N_Config);
+
+        // Every settings page that exposes rows through the ConfigCell system.
+        ArrayList<BaseNekoXSettingsActivity> xFragments = new ArrayList<>();
+        xFragments.add(new NekoGeneralSettingsActivity());
+        xFragments.add(new NekoChatSettingsActivity());
+        xFragments.add(new NekoExperimentalSettingsActivity());
+        xFragments.add(new NekoDebugSettingsActivity());
+        xFragments.add(new NekoAccountSettingsActivity());
+
+        for (BaseNekoXSettingsActivity fragment : xFragments) {
+            int base = fragment.getBaseGuid();
             int drawable = fragment.getDrawable();
-            String f_title = fragment.getTitle();
+            String page = fragment.getTitle();
             for (Map.Entry<Integer, String> entry : fragment.getRowMapReverse().entrySet()) {
                 Integer i = entry.getKey();
                 String key = entry.getValue();
-                if (key.equals(String.valueOf(i))) {
+                // Rows without a config binding are stored as their index; skip them.
+                if (key == null || key.equals(String.valueOf(i))) {
                     continue;
                 }
-                int guid = uid + i;
-                String title = LocaleController.getString(key);
-                if (title == null || title.isEmpty()) {
+                String title;
+                try {
+                    title = LocaleController.getString(key);
+                } catch (Exception e) {
                     continue;
                 }
+                if (TextUtils.isEmpty(title) || title.startsWith("LOC_ERR")) {
+                    continue;
+                }
+                int guid = base + i;
                 Runnable open = () -> {
                     try {
                         BaseNekoXSettingsActivity f = fragment.getClass().getDeclaredConstructor().newInstance();
                         callback.presentFragment(f);
-                        AndroidUtilities.runOnUIThread(() -> f.scrollToRow(key, null));
-                    } catch (Exception ignored) {}
+                        AndroidUtilities.runOnUIThread(() -> f.scrollToRow(key, () -> {}));
+                    } catch (Exception ignored) {
+                    }
                 };
-                SettingsSearchResult result = new SettingsSearchResult(
-                        guid, title, n_title, f_title, drawable, open
-                );
-                items.add(result);
+                items.add(new SettingsSearchResult(guid, title, section, page, drawable, open));
             }
         }
+
+        // Ghost Mode is a separate page with hand-written rows.
+        String ghostPage = LocaleController.getString(R.string.GhostMode);
+        int ghostIcon = R.drawable.icon_ghost;
+        addLegacyRow(items, callback, new NekoGhostModeActivity(), 20000,
+                R.string.GhostMode, section, ghostPage, ghostIcon, "ghost");
+        addLegacyRow(items, callback, new NekoGhostModeActivity(), 20001,
+                R.string.DontReadMessages, section, ghostPage, ghostIcon, "read");
+        addLegacyRow(items, callback, new NekoGhostModeActivity(), 20002,
+                R.string.DontSendOnlinePackets, section, ghostPage, ghostIcon, "online");
+        addLegacyRow(items, callback, new NekoGhostModeActivity(), 20003,
+                R.string.DontSendUploadProgress, section, ghostPage, ghostIcon, "upload");
+        addLegacyRow(items, callback, new NekoGhostModeActivity(), 20004,
+                R.string.DontReadStories, section, ghostPage, ghostIcon, "stories");
+        addLegacyRow(items, callback, new NekoGhostModeActivity(), 20005,
+                R.string.SendOfflinePacketAfterOnline, section, ghostPage, ghostIcon, "offline");
+        addLegacyRow(items, callback, new NekoGhostModeActivity(), 20006,
+                R.string.MarkReadAfterAction, section, ghostPage, ghostIcon, "markread");
+
         return items;
+    }
+
+    /** Adds a result that just opens a page; used for pages outside the CellGroup system. */
+    private static void addLegacyRow(ArrayList<SettingsSearchResult> items, Callback callback,
+                                     BaseFragment fragment, int guid, int titleRes,
+                                     String section, String page, int icon, String key) {
+        String title = LocaleController.getString(titleRes);
+        if (TextUtils.isEmpty(title)) {
+            return;
+        }
+        Runnable open = () -> callback.presentFragment(fragment);
+        items.add(new SettingsSearchResult(guid, title, section, page, icon, open));
     }
 }

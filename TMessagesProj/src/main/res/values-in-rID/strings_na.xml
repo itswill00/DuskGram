@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="N_Config">N-Config</string>
+    <string name="N_Config">Dusk Settings</string>
     <string name="ForceCopy">Salin Paksa</string>
     <string name="disableSecondAddress">Nonaktifkan Permintaan Alamat Kedua</string>
     <string name="InvertReply">Membalikkan</string>

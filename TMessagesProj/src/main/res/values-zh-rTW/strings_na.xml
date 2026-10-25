@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="N_Config">N - 設定</string>
+    <string name="N_Config">Dusk Settings</string>
     <string name="ForceCopy">強制複製</string>
     <string name="disableSecondAddress">禁用請求備用伺服器位址</string>
     <string name="InvertReply">反轉</string>

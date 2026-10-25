@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="N_Config">N-Config</string>
+    <string name="N_Config">Dusk Settings</string>
     <string name="ForceCopy">Force Copy</string>
     <string name="disableSecondAddress">Disable Second Address Request</string>
     <string name="InvertReply">Invert</string>
@@ -382,6 +382,7 @@
     <string name="DuskGramUpdateDownloading">Downloading update…</string>
     <string name="DuskGramUpdateDownloadFailed">Could not download the update.</string>
     <string name="DuskGramUpdateCheckFailed">Could not check for updates.</string>
+    <string name="DuskSettingsSearch">Search settings</string>
     <string name="MessagePreviewText">since i want the code to be terrible i am ||vibe-coding||</string>
     <string name="MessagePreviewPollQuestion">How is the code?</string>
     <string name="MessagePreviewPollAnswerTerrible">Terrible</string>

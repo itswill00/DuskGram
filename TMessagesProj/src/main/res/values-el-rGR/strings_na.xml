@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="N_Config">N-Ρύθμιση</string>
+    <string name="N_Config">Dusk Settings</string>
     <string name="ForceCopy">Εξαναγκασμός Αντιγραφής</string>
     <string name="disableSecondAddress">Απενεργοποίηση Δεύτερης Αίτησης Διεύθυνσης</string>
     <string name="InvertReply">Αναστροφή</string>

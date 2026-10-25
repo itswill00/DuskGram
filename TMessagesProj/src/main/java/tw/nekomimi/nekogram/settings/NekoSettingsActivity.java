@@ -87,6 +87,9 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
         actionBar.createMenu()
                 .addItem(0, R.drawable.cloud_sync)
                 .setOnClickListener(v -> CloudSettingsHelper.getInstance().showDialog(NekoSettingsActivity.this));
+        actionBar.createMenu()
+                .addItem(1, R.drawable.msg_search)
+                .setOnClickListener(v -> presentFragment(new DuskSettingsSearchActivity()));
 
         return fragmentView;
     }

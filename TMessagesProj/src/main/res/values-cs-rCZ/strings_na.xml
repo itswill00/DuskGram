@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="N_Config">Konfigurace N-</string>
+    <string name="N_Config">Dusk Settings</string>
     <string name="ForceCopy">Vynutit kopírování</string>
     <string name="disableSecondAddress">Zakázat žádost o druhou adresu</string>
     <string name="InvertReply">Invert</string>
