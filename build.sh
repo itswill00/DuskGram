@@ -280,19 +280,24 @@ if [[ $DO_SEND -eq 1 ]]; then
   if [[ ${#APKS[@]} -eq 0 ]]; then
     c_warn "no APK found in $OUT_DIR, nothing to send"
   else
-    # Build the caption from the repo state so each post is self-describing.
+    # Keep the caption short: version, what changed, where to get it.
     VERSION="$(grep -m1 '^APP_VERSION_NAME=' "$ROOT/gradle.properties" 2>/dev/null | cut -d= -f2)"
     CODE="$(grep -m1 '^APP_VERSION_CODE=' "$ROOT/gradle.properties" 2>/dev/null | cut -d= -f2)"
-    SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-    BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
-    SUBJECT="$(git log -1 --pretty=%s 2>/dev/null || true)"
+    TAG="v${VERSION:-?}-${CODE:-?}"
 
-    CAPTION="$(printf '<b>DuskGram build</b>\nversion: <code>%s</code> (%s)\nbranch: <code>%s</code>\ncommit: <code>%s</code>' \
-      "${VERSION:-?}" "${CODE:-?}" "$BRANCH" "$SHA")"
-    if [[ -n "$SUBJECT" ]]; then
-      CAPTION+="$(printf '\nlast: %s' "$SUBJECT")"
+    CAPTION="$(printf '<b>DuskGram %s</b>' "${VERSION:-?}")"
+    # Bullets come from the commits made since the previous release tag, so the
+    # caption stays accurate even when the last commit is only a version bump.
+    PREV_TAG="$(git describe --tags --abbrev=0 'HEAD^' 2>/dev/null || echo fork-start)"
+    BULLETS="$(git log "${PREV_TAG}..HEAD" --pretty=%s 2>/dev/null \
+      | grep -viE '^(bump version|merge |revert )' \
+      | head -5 || true)"
+    if [[ -n "$BULLETS" ]]; then
+      while IFS= read -r line; do
+        CAPTION+="$(printf '\n• %s' "$line")"
+      done <<<"$BULLETS"
     fi
-    CAPTION+="$(printf '\nbuilt: %s' "$(date -u '+%Y-%m-%d %H:%M UTC')")"
+    CAPTION+="$(printf '\n\n<a href="https://github.com/itswill00/DuskGram/releases/tag/%s">GitHub release</a>' "$TAG")"
 
     c_info "posting ${#APKS[@]} APK(s) to Telegram"
     if [[ ! -x "$ROOT/scripts/tg-upload.sh" ]]; then

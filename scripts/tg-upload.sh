@@ -2,6 +2,9 @@
 # ---------------------------------------------------------------------------
 # Telegram uploader for build artifacts.
 #
+# Multiple files are posted as a single album (one bubble, one caption) via
+# sendMediaGroup. A single file is posted with sendDocument.
+#
 # Prefers a local Telegram Bot API server (limit 2000 MiB). Falls back to the
 # cloud API (limit 50 MiB) when the local server is not running, and skips the
 # file with a clear warning when it is too large for the cloud API.
@@ -13,6 +16,7 @@
 # Usage:
 #   scripts/tg-upload.sh <file> [more files...]
 #   scripts/tg-upload.sh --caption "text" <file>...
+#   scripts/tg-upload.sh --separate --caption "text" <file>...
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -20,16 +24,19 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOCAL_PORT="${TG_BOT_API_PORT:-8081}"
 CLOUD_LIMIT=$((50 * 1024 * 1024))
 LOCAL_LIMIT=$((2000 * 1024 * 1024))
+ALBUM_MAX=10
 
 if [[ -f "$ROOT/.telegram.env" ]]; then
   set -a; . "$ROOT/.telegram.env"; set +a
 fi
 
 CAPTION=""
+SEPARATE=0
 FILES=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --caption) CAPTION="${2:?}"; shift 2 ;;
+    --caption)  CAPTION="${2:?}"; shift 2 ;;
+    --separate) SEPARATE=1; shift ;;
     *) FILES+=("$1"); shift ;;
   esac
 done
@@ -59,16 +66,81 @@ else
   c_info "using cloud Bot API (limit $((LIMIT / 1024 / 1024)) MiB)"
 fi
 
-send_one() {
-  local f="$1" size name
-  [[ -f "$f" ]] || { c_warn "missing: $f"; return 0; }
+# drop files that are missing or too large; fills SEND with usable paths
+SEND=()
+for f in "${FILES[@]}"; do
+  [[ -f "$f" ]] || { c_warn "missing: $f"; continue; }
   size="$(stat -c%s "$f")"
-  name="$(basename "$f")"
-
   if (( size > LIMIT )); then
-    c_err "$name is $(fmt_size "$size"), over the $((LIMIT / 1024 / 1024)) MiB limit of this endpoint -> skipped"
-    return 1
+    c_err "$(basename "$f") is $(fmt_size "$size"), over the $((LIMIT / 1024 / 1024)) MiB limit of this endpoint -> skipped"
+    continue
   fi
+  SEND+=("$f")
+done
+
+[[ ${#SEND[@]} -gt 0 ]] || { c_err "nothing to upload"; exit 1; }
+
+# json_escape: minimal escaping for the caption inside the media JSON
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+describe() {
+  local name
+  name="$(basename "$1")"
+  c_ok "sent $name ($(fmt_size "$(stat -c%s "$1")")) as message $2"
+}
+
+# send_album <files...> — all files in one bubble, caption on the first item
+send_album() {
+  local -a batch=("$@")
+  local media="[" first=1 i=0 f resp desc mid
+  for f in "${batch[@]}"; do
+    [[ $first -eq 1 ]] || media+=","
+    media+="{\"type\":\"document\",\"media\":\"attach://file$i\""
+    if [[ $first -eq 1 && -n "$CAPTION" ]]; then
+      media+=",\"caption\":\"$(json_escape "$CAPTION")\",\"parse_mode\":\"HTML\""
+    fi
+    media+="}"
+    first=0
+    i=$((i + 1))
+  done
+  media+="]"
+
+  local -a args=(-sS --max-time 1800
+    --form-string "chat_id=$TELEGRAM_CHAT_ID"
+    --form-string "media=$media")
+  i=0
+  for f in "${batch[@]}"; do
+    args+=(-F "file$i=@$f")
+    i=$((i + 1))
+  done
+
+  resp="$(curl "${args[@]}" "$API/bot$TELEGRAM_BOT_TOKEN/sendMediaGroup")" || {
+    c_err "album upload failed (curl error)"; return 1;
+  }
+
+  if grep -q '"ok":true' <<<"$resp"; then
+    mid="$(grep -o '"message_id":[0-9]*' <<<"$resp" | head -1 | cut -d: -f2)"
+    c_ok "sent ${#batch[@]} file(s) as one album (message ${mid:-?})"
+    return 0
+  fi
+
+  desc="$(grep -o '"description":"[^"]*"' <<<"$resp" | head -1 | cut -d: -f2- | tr -d '"')"
+  c_warn "album upload failed: ${desc:-unknown error}; falling back to separate messages"
+  return 1
+}
+
+send_one() {
+  local f="$1" name size resp desc mid
+  name="$(basename "$f")"
+  size="$(stat -c%s "$f")"
 
   # --form-string keeps curl from treating a leading '<' or '@' in the
   # caption (HTML markup) as a file-read directive.
@@ -80,26 +152,29 @@ send_one() {
     args+=(--form-string "caption=$CAPTION")
   fi
 
-  local resp
   resp="$(curl "${args[@]}" "$API/bot$TELEGRAM_BOT_TOKEN/sendDocument")" || {
     c_err "upload failed for $name (curl error)"; return 1;
   }
 
   if grep -q '"ok":true' <<<"$resp"; then
-    local mid
     mid="$(grep -o '"message_id":[0-9]*' <<<"$resp" | head -1 | cut -d: -f2)"
-    c_ok "sent $name ($(fmt_size "$size")) as message $mid"
+    describe "$f" "${mid:-?}"
     return 0
   fi
 
-  local desc
   desc="$(grep -o '"description":"[^"]*"' <<<"$resp" | head -1 | cut -d: -f2- | tr -d '"')"
   c_err "upload failed for $name: ${desc:-unknown error}"
   return 1
 }
 
 rc=0
-for f in "${FILES[@]}"; do
-  send_one "$f" || rc=1
-done
+
+if [[ $SEPARATE -eq 0 && ${#SEND[@]} -gt 1 && ${#SEND[@]} -le $ALBUM_MAX ]]; then
+  send_album "${SEND[@]}" || { for f in "${SEND[@]}"; do send_one "$f" || rc=1; done; }
+else
+  for f in "${SEND[@]}"; do
+    send_one "$f" || rc=1
+  done
+fi
+
 exit $rc
