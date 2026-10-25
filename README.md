@@ -1,246 +1,265 @@
-# Nagram
+# DuskGram
 
-Nagram is a third-party Telegram client based on [NekoX](https://web.archive.org/web/20240306062834/https://github.com/NekoX-Dev/NekoX) with some modifications.
+An independent Telegram client for Android, built from the
+[Nagram](https://github.com/NextAlone/Nagram) codebase — which in turn is based
+on [NekoX](https://web.archive.org/web/20240306062834/https://github.com/NekoX-Dev/NekoX)
+and the official Telegram for Android client.
 
-- Official Site: <https://nagram.app>
-- Channel: <https://t.me/nagram_channel>
-- Assets: <https://t.me/nagram_assets>
-- Releases: <https://github.com/NextAlone/Nagram/releases>
-- Issues here: <https://t.me/na_gram_reports/18>
+DuskGram keeps everything the upstream forks offer and adds its own branding,
+icon themes and build tooling. It is **not** affiliated with, endorsed by, or an
+official release of Telegram or the Nagram project.
 
-## Branding
+- **Releases:** <https://github.com/itswill00/DuskGram/releases>
+- **Source:** <https://github.com/itswill00/DuskGram>
+- **Package name:** `app.duskgram.messenger`
 
-Nagram's source code is licensed under GPLv3. The Nagram name and project
-identity belong to [@NextAlone](https://github.com/NextAlone); the Nagram
-application icon artwork is copyright © MaitungTM. These are separate brand
-assets. Modified, forked, and third-party distributions must use distinct
-branding and replace the Nagram brand assets. See [BRANDING.md](BRANDING.md)
-for the complete policy.
+## Downloads
 
-## Additional feature over Nagram
+Grab the APK for your device from the
+[latest release](https://github.com/itswill00/DuskGram/releases/latest):
 
-1. Nice icon (copyright © MaitungTM)
-2. Combine message
-3. Editable text style 
-4. Forced copy
-5. Invert reply
-6. Quick reply in longClick menu (thanks to @blxueya)
-7. Undo and Redo
-8. Scrollable chat preview (thanks to TeleTux)
-9. Noise suppress and voice enhance (thanks to )
+| ABI | Who it is for |
+|---|---|
+| `arm64-v8a` | 64-bit ARM — nearly all phones since ~2015 |
+| `armeabi-v7a` | 32-bit ARM — older or low-end devices |
 
-----
+Every release also lists a SHA-256 checksum per file and the signing
+certificate fingerprint. Requirements: **Android 6.0 (API 23)** or newer.
 
-## NekoX Changes
+DuskGram installs **alongside** Telegram and Nagram. It uses its own package
+name, so it will not replace or update an existing client, and it does not share
+their data.
+
+## Versioning
+
+The fork has its own version line, separate from the Telegram version it is
+based on:
+
+| Field | Meaning | Current |
+|---|---|---|
+| `APP_VERSION_NAME` | DuskGram version | `1.0.0` |
+| `APP_VERSION_CODE` | DuskGram build number | `1` |
+| `UPSTREAM_VERSION_NAME` | Telegram version this fork tracks | `13.0.2` |
+| `UPSTREAM_VERSION_CODE` | Telegram build number | `7175` |
+
+All four live in `gradle.properties` and are the single source of truth. Bump
+the fork version with:
+
+```bash
+./build.sh --bump patch    # 1.0.0 -> 1.0.1
+./build.sh --bump minor    # 1.0.0 -> 1.1.0
+./build.sh --bump major    # 1.0.0 -> 2.0.0
+```
+
+## Building
+
+The repository ships `build.sh`, an incremental builder that **never cleans**
+and only rebuilds what actually changed.
+
+### Prerequisites
+
+- JDK 17
+- Android SDK with `platforms;android-36`, `build-tools;36.0.0`,
+  `ndk;27.2.12479018` and `cmake;3.22.1`
+- Native toolchain: `gcc`, `g++`, `make`, `cmake`, `ninja`, `yasm`
+
+```bash
+export ANDROID_HOME=/path/to/android-sdk
+```
+
+### First checkout
+
+```bash
+git clone https://github.com/itswill00/DuskGram.git
+cd DuskGram
+git submodule update --init --recursive
+```
+
+### Everyday builds
+
+```bash
+./build.sh                     # native (if needed) + release APK
+./build.sh --status            # show what would be rebuilt, build nothing
+./build.sh -a arm64-v8a        # single ABI
+./build.sh --apk-only          # skip the native step entirely
+./build.sh --native-only       # only rebuild libtmessages.49.so
+./build.sh --force-native      # force a native rebuild (still no clean)
+./build.sh --debug             # assembleDebug instead of assembleRelease
+```
+
+How it stays fast:
+
+- A content hash over `TMessagesProj/jni` (git tree, submodule commits, patches,
+  local diff, untracked files, NDK version) decides whether the native library
+  must be rebuilt. Untouched ABIs are skipped outright.
+- An existing `libtmessages.49.so` that is newer than every native source is
+  adopted instead of rebuilt.
+- The APK step is plain Gradle with the build cache on, so untouched tasks stay
+  `UP-TO-DATE`.
+- A `flock` guard prevents two builds from running at once.
+
+### Publishing
+
+```bash
+./build.sh --send              # build, then post the APKs to Telegram
+./build.sh --release           # build, then publish a GitHub release
+./build.sh --bump minor --send --release   # bump, build, ship everywhere
+```
+
+`--release` creates a release tagged `v<version>-<code>` with notes generated by
+`scripts/release-notes.sh` (download table, per-file SHA-256, ABI guidance,
+changelog limited to this fork's own commits, and the signing certificate
+fingerprint). If the release already exists its notes and assets are updated.
+
+### Telegram uploads
+
+The cloud Bot API refuses files above 50 MiB, which a release APK already
+exceeds. `scripts/tg-bot-api.sh` runs a self-hosted
+[Bot API server](https://github.com/tdlib/telegram-bot-api) in `--local` mode,
+raising the limit to 2000 MiB:
+
+```bash
+./scripts/tg-bot-api-build.sh   # build the server once
+./scripts/tg-bot-api.sh start   # or: systemctl start telegram-bot-api
+./scripts/tg-bot-api.sh status
+```
+
+`scripts/tg-upload.sh` prefers the local server and falls back to the cloud API,
+skipping files that are too large for whichever endpoint is in use. Credentials
+are read from `.telegram.env` (gitignored) or the environment:
+
+```env
+TELEGRAM_BOT_TOKEN="123456:abcdef"
+TELEGRAM_CHAT_ID="-1001234567890"
+```
+
+A `systemd` unit is provided at `scripts/telegram-bot-api.service`.
+
+### Manual build
+
+If you would rather not use the script:
+
+```bash
+git submodule update --init --recursive
+./run init libs          # patch tgcalls
+./run libs native        # build native code for arm64-v8a and armeabi-v7a
+./gradlew TMessagesProj:assembleRelease --no-configuration-cache
+```
+
+The APK module is `:TMessagesProj`; `TMessagesProj_App*` are not part of
+`settings.gradle`.
+
+### Signing
+
+`TMessagesProj/release.keystore` holds a **test** keystore (alias `key0`,
+password `123456`). Replace it with your own before distributing builds, and
+put the credentials in `local.properties`:
+
+```properties
+sdk.dir=/path/to/android-sdk
+ndk.dir=/path/to/android-sdk/ndk/27.2.12479018
+KEYSTORE_PASS=your-store-password
+ALIAS_NAME=your-key-alias
+ALIAS_PASS=your-key-password
+TELEGRAM_APP_ID=123456
+TELEGRAM_APP_HASH=abcdef0123456789
+```
+
+The upstream `verifySign()` gate in `TMessagesProj/jni/jni.c` compares the
+installed APK's certificate against a hardcoded fingerprint. It is disabled in
+this fork, because a self-signed build would otherwise fail to load
+`libtmessages.49.so`.
+
+Get your own `TELEGRAM_APP_ID` / `TELEGRAM_APP_HASH` from
+<https://my.telegram.org/auth>. Replace `TMessagesProj/google-services.json` if
+you want FCM to work.
+
+## Icon themes
+
+DuskGram ships four launcher themes, switchable in the app settings:
+
+| Theme | Palette |
+|---|---|
+| Dusk | violet twilight (default) |
+| Midnight | deep blue night |
+| Ember | red embers |
+| Forest | deep green |
+
+## Features
+
+Everything below is inherited from Nagram and NekoX.
+
+### From Nagram
+
+- Combine message
+- Editable text style
+- Forced copy
+- Invert reply
+- Quick reply in the long-click menu
+- Undo and redo
+- Scrollable chat preview
+- Noise suppress and voice enhance
+
+### From NekoX
 
 - Most of Nekogram's features
 - Unlimited login accounts
-- **Proxy**
-    - Built-in VMess, Shadowsocks, SSR, Trojan-GFW proxies support (No longer maintained)
-    - Built-in public proxy (WebSocket relay via Cloudflare CDN), [documentation and for PC](https://github.com/arm64v8a/NekoXProxy)
-    - Proxy subscription support
-    - Ipv6 MTProxy support
-    - Able to parse all proxy subscription format: SIP008, ssr, v2rayN, vmess1, shit ios app formats, clash config and more
-    - Proxies import and export, remarks, speed measurement, sorting, delete unusable nodes, etc
-    - Scan the QR code (any link, can add a proxy)
-    - The ( vmess / vmess1 / ss / ssr / trojan ) proxy link in the message can be clicked
-    - Allow auto-disabling proxy when VPN is enabled
-    - Proxy automatic switcher
-    - Don't alert "Proxy unavailable" for non-current account
-- **Stickers**
-    - Custom [Emoji packs](https://web.archive.org/web/20221126140435/https://github.com/NekoX-Dev/NekoX/wiki/emoji)
-    - Add stickers without sticker pack
-    - Sticker set list backup / restore / share
-- **Internationalization**
-    - OpenCC Chinese Convert
-    - Full InstantView translation support
-    - Translation support for selected text on input and in messages
-    - Google Cloud Translate / Yandex.Translate support
-    - Force English emoji keywords to be loaded
-    - Persian calendar support
-- **Additional Options**
-    - Option to disable vibration
-    - Dialog sorting is optional "Unread and can be prioritized for reminding" etc
-    - Option to skip "regret within five seconds"
-    - Option to not send comment first when forwarding
-    - Option to use nekox chat input menu: replace record button with a menu which contains an switch to control link preview (enabled by default)
-    - Option to disable link preview by default: to prevent the server from knowing that the link is shared through Telegram.
-    - Option to ignore Android-only content restrictions (except for the Play Store version).
-    - Custom cache directory (supports external storage)
-    - Custom server (official, test DC)
-    - Option to block others from starting a secret chat with you
-    - Option to disable trending
-- **Additional Actions**
-    - Allow clicking on links in self profile
-    - Delete all messages in group
-    - Unblock all users support
-    - Login via QR code
-    - Scan and confirm the login QR code directly
-    - Allow clearing app data
-    - Proxies, groups, channels, sticker packs are able to be shared as QR codes
-    - Add "@Name" when long-pressing @user option
-    - Allow creating a group without inviting anyone
-    - Allow upgrading a group to a supergroup
-    - Mark dialogs as read using tab menu
-    - Enabled set auto delete timer option for private chats and private groups
-    - Support saving multiple selected messages to Saved Messages
-    - Support unpinning multiple selected messages
-    - View stats option for messages
-- **Optimization**
-    - Keep the original file name when downloading files
-    - View the data center you belong to when you don't have an avatar
-    - Enhanced notification service, optional version without Google Services
-    - Improved session dialog
-    - Improved link long click menu
-    - Improved hide messages from blocked users feature
-    - Don't process cleanup draft events after opening chat
-- **Others**
-    - OpenKeychain client (sign / verify / decrypt / import)
-    - Text replacer
-- **UI**
-    - Telegram X style menu for unpinning messages
-    - Built-in Material Design themes / Telegram X style icons
-- And more :)
+- **Proxy** — VMess, Shadowsocks, SSR and Trojan-GFW support, public proxy via
+  Cloudflare CDN, subscription support, IPv6 MTProxy, import/export, sorting,
+  speed measurement, QR scanning, automatic switcher
+- **Stickers** — custom emoji packs, add stickers without a pack, sticker set
+  backup / restore / share
+- **Internationalization** — OpenCC Chinese conversion, full InstantView
+  translation, translate on input and in messages, Google Cloud Translate and
+  Yandex.Translate, Persian calendar
+- **Options** — disable vibration, dialog sorting, skip "regret within five
+  seconds", custom cache directory, custom server, block secret chats, disable
+  trending
+- **Actions** — login via QR code, delete all messages in a group, unblock all
+  users, share as QR codes, create a group without inviting anyone, mark dialogs
+  as read from the tab menu, save multiple selected messages
+- **Optimization** — keep the original file name when downloading, enhanced
+  notification service, optional build without Google Services
+- **Others** — OpenKeychain client, text replacer
+- **UI** — Telegram X style unpinning menu, Material Design themes, Telegram X
+  style icons
 
-## API and Protocol documentation
+## Project layout
 
-Telegram API manuals: <https://core.telegram.org/api>
-
-MTProto protocol manuals: <https://core.telegram.org/mtproto>
-
-## Compilation Guide
-
-**NOTE: For Windows users, please consider using a Linux VM (such as WSL2) or dual booting.**
-
-Environment:
-
-- Linux distribution based on Debian or Arch Linux, or macOS
-
-- Native tools: `gcc` `go` `make` `cmake` `ninja` `yasm`
-  
-  ```shell
-  # for Debian based distribution
-  sudo apt install gcc golang make cmake ninja-build yasm
-  # for Arch Linux based distribution
-  sudo pacman -S base-devel go ninja cmake yasm
-  # for macOS
-  xcode-select --install # install developer tools (will open confirm dialog)
-  brew install go cmake ninja yasm # install other tools by homebrew
-  ```
-- Android SDK: `build-tools;33.0.0` `platforms;android-33` `ndk;27.2.12479018` `cmake;3.18.1` `cmake;3.22.1` (the default location is **$HOME/Android/SDK**, otherwise you need to specify **$ANDROID_HOME** for it)
-
-  It is recommended to use [Android Studio](https://developer.android.com/studio) to install, but you can also use `sdkmanager` command on distributions based on Debian:
-
-  ```shell
-  sudo apt install sdkmanager
-  sdkmanager --sdk_root $HOME/Android/SDK --install "build-tools;33.0.0" "platforms;android-33" "ndk;27.2.12479018" "cmake;3.18.1" "cmake;3.22.1"
-  ```
-
-Build: 
-
-1. Checkout submodules
-
-   ```shell
-   git submodule update --init --recursive
-   ```
-
-2. Disable signature check by removing the following lines in **TMessagesProj/jni/jni.c**:
-   ```c
-    if (verifySign(env) != JNI_OK) {
-        return JNI_ERR;
-    }
-   ```
-
-3. Build external libraries and native code: 
-   ```shell
-   ./run init libs
-   ./run libs native
-   ```
-
-4. Fill out `TELEGRAM_APP_ID` and `TELEGRAM_APP_HASH` in **local.properties** (from [Telegram Developer](https://my.telegram.org/auth))
-
-5. Replace **TMessagesProj/google-services.json** if you want FCM to work.
-
-6. Replace **release.keystore** with yours and fill out `ALIAS_NAME`, `KEYSTORE_PASS` and `ALIAS_PASS` in **local.properties**.
-
-7. Build with Gradle:
-
-   ```shell
-   ./gradlew assemble<Release/Debug>
-   ```
-
-----
-
-## Compilation with GitHub Action
-
-1. Create your own `release.keystore` to replace `TMessagesProj/release.keystore`.
-
-2. Prepare LOCAL_PROPERTIES
-
-- KEYSTORE_PASS: from your keystore
-- ALIAS_NAME: from your keystore
-- ALIAS_PASS: from your keystore
-- TELEGRAM_APP_ID: from [Telegram Developer](https://my.telegram.org/auth)
-- TELEGRAM_APP_HASH: from [Telegram Developer](https://my.telegram.org/auth)
-
-```env
-KEYSTORE_PASS=123456
-ALIAS_NAME=key0
-ALIAS_PASS=123456
-TELEGRAM_APP_ID=123456
-TELEGRAM_APP_HASH=abcdefg
+```
+build.sh                      incremental build, release and upload driver
+scripts/tg-upload.sh          Telegram uploader (local server or cloud API)
+scripts/tg-bot-api.sh         manage the local Bot API server
+scripts/tg-bot-api-build.sh   build the local Bot API server
+scripts/release-notes.sh      generate Markdown release notes
+scripts/telegram-bot-api.service   systemd unit
+TMessagesProj/                the app module (native code, Java/Kotlin, resources)
+TMessagesProj/jni/            native code, TDLib, tgcalls, third-party libraries
 ```
 
-Then, use base64 to encode the above.
+## Branding and licence
 
-3. Add Repo Action Secrets
+The source is licensed under **GPLv3** — see [LICENSE](LICENSE).
 
-- LOCAL_PROPERTIES: from step 2
-- HELPER_BOT_TOKEN: from telegram [@Botfather](https://t.me/Botfather), such as `1111:abcd`; the bot that keeps the in-app update metadata
-- NAGRAM_CHANNEL_BOT_TOKEN, NAGRAM_API_ID, NAGRAM_API_HASH: the bot that posts the builds to the channels, and the Telegram API credentials its Bot API server runs with
+DuskGram is a fork. The Nagram name, logos and icon artwork belong to their
+respective owners and are **not** part of this fork's branding; they have been
+replaced. The upstream policy is preserved in [BRANDING.md](BRANDING.md) for
+reference. If you fork DuskGram, use your own name, icon and identity.
 
-   The channels are repository variables: NAGRAM_CHANNEL_ASSETS_CHAT_ID gets every build, NAGRAM_CHANNEL_CHAT_ID gets a copy of the releases. Nothing is posted while the token or the channels are not set. A release needs its notes in `docs/releases/<version code>.md`, with optional English notes in `<version code>.en.md`.
+## Credits
 
-   The GitLab pipeline posts to its own channel instead, with the HELPER_BOT_TARGET CI/CD variable holding the chat id, such as `-1001234567890`.
-
-4. Disable signature check by removing the following lines in **TMessagesProj/jni/jni.c**:
-   ```c
-    if (verifySign(env) != JNI_OK) {
-        return JNI_ERR;
-    }
-   ```
-
-5. Run Release Build
-
-## FAQ
-
-#### What is the differences between Nagram, NekoX and Nekogram?
-
-Developed by different developers, read the feature list above to understand the differences.
-
-#### I've encountered a bug!
-
-First, make sure you have the latest version installed (check the channel).
-
-Then, if the issue appears in the official Telegram client too, please submit it to the officials, (be careful not to show custom clients in the description and screenshots).
-
-Then, submit it to our [bot](https://t.me/OrIssuesBot).
-
-If you experience a *crash*, you also need to click on the version number at the bottom of the settings and select "Enable Log" and send it to us.
-
-## Localization
-
-Nagram is forked from Telegram, thus most locales follows the translations of Telegram for Android, checkout <https://translations.telegram.org/en/android/>.
-
-Is Nagram not in your language, or the translation is incorrect or incomplete? Get involved in the translations on our [Weblate](https://xtaolabs.crowdin.com/nagram).
-
-[![Crowdin](https://badges.crowdin.net/e/156df3a631d257cc6b57301566d545fb/localized.svg)](https://xtaolabs.crowdin.com/nagram)
-
-## Thanks
-
+- [Nagram](https://github.com/NextAlone/Nagram)
 - [NekoX](https://web.archive.org/web/20240306062834/https://github.com/NekoX-Dev/NekoX)
 - [Nekogram](https://gitlab.com/Nekogram/Nekogram)
 - [Pigeongram](https://gitlab.com/JasonKhew96/Nekogram)
 - [Nullgram](https://github.com/qwq233/Nullgram)
 - [TeleTux](https://github.com/TeleTux/TeleTux)
 - [OwlGram](https://github.com/OwlGramDev/OwlGram)
+- [TDLib](https://github.com/tdlib/td),
+  [tgcalls](https://github.com/TelegramMessenger/tgcalls) and the other
+  third-party libraries under `TMessagesProj/jni/third_party`
+
+## API documentation
+
+- Telegram API: <https://core.telegram.org/api>
+- MTProto: <https://core.telegram.org/mtproto>

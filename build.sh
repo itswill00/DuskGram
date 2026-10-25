@@ -315,24 +315,30 @@ if [[ $DO_RELEASE -eq 1 ]]; then
   else
     VERSION="$(grep -m1 '^APP_VERSION_NAME=' "$ROOT/gradle.properties" | cut -d= -f2)"
     CODE="$(grep -m1 '^APP_VERSION_CODE=' "$ROOT/gradle.properties" | cut -d= -f2)"
-    SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
     TAG="v${VERSION}-${CODE}"
 
-    NOTES="$(printf 'DuskGram %s (build %s)\n\ncommit: %s\n\n' "${VERSION:-?}" "${CODE:-?}" "$SHA")"
-    NOTES+="$(git log -1 --pretty='%s' 2>/dev/null || true)"
+    NOTES_FILE="$(mktemp)"
+    if [[ -x "$ROOT/scripts/release-notes.sh" ]]; then
+      "$ROOT/scripts/release-notes.sh" "${APKS[@]}" > "$NOTES_FILE" 2>/dev/null || true
+    fi
+    if [[ ! -s "$NOTES_FILE" ]]; then
+      printf 'DuskGram %s (build %s)\n' "${VERSION:-?}" "${CODE:-?}" > "$NOTES_FILE"
+    fi
 
     c_info "publishing GitHub release $TAG"
     if gh release view "$TAG" >/dev/null 2>&1; then
       c_info "release $TAG exists, uploading assets (clobber)"
+      gh release edit "$TAG" --title "DuskGram $VERSION ($CODE)" --notes-file "$NOTES_FILE" >/dev/null 2>&1 || true
       if gh release upload "$TAG" "${APKS[@]}" --clobber; then
         c_ok "assets updated on release $TAG"
       else
         c_warn "uploading assets failed"
       fi
-    elif gh release create "$TAG" "${APKS[@]}" --title "DuskGram $VERSION ($CODE)" --notes "$NOTES"; then
+    elif gh release create "$TAG" "${APKS[@]}" --title "DuskGram $VERSION ($CODE)" --notes-file "$NOTES_FILE"; then
       c_ok "release $TAG published"
     else
       c_warn "creating release $TAG failed"
     fi
+    rm -f "$NOTES_FILE"
   fi
 fi
