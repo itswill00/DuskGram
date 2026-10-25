@@ -14,6 +14,12 @@
 #   ./build.sh --force-native      # force native rebuild (no clean)
 #   ./build.sh --debug             # assembleDebug instead of assembleRelease
 #   ./build.sh --status            # show state, build nothing
+#   ./build.sh --send              # after building, post APKs to Telegram
+#   ./build.sh --send-only         # post existing APKs, build nothing
+#
+# Telegram: credentials come from .telegram.env (gitignored) or the
+# environment (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID). A local Bot API server
+# raises the upload limit from 50 MiB to 2000 MiB; see scripts/tg-bot-api.sh.
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -39,8 +45,9 @@ DO_APK=1
 FORCE_NATIVE=0
 DEBUG_BUILD=0
 STATUS_ONLY=0
+DO_SEND=0
 
-usage() { sed -n '3,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0; }
+usage() { sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -50,6 +57,8 @@ while [[ $# -gt 0 ]]; do
     --force-native)  FORCE_NATIVE=1; shift ;;
     --debug)         DEBUG_BUILD=1; shift ;;
     --status)        STATUS_ONLY=1; shift ;;
+    --send)          DO_SEND=1; shift ;;
+    --send-only)     DO_SEND=1; DO_NATIVE=0; DO_APK=0; shift ;;
     -h|--help)       usage ;;
     *) echo "unknown option: $1" >&2; usage ;;
   esac
@@ -225,4 +234,35 @@ if [[ $DO_APK -eq 1 ]]; then
     printf '    %s  (%s)\n' "$f" "$(du -h "$f" | cut -f1)"
   done
   c_ok "build finished"
+fi
+
+# ----------------------------- telegram ------------------------------------
+if [[ $DO_SEND -eq 1 ]]; then
+  APKS=()
+  while IFS= read -r f; do APKS+=("$f"); done < <(find "$OUT_DIR" -name '*.apk' -type f 2>/dev/null | sort)
+
+  if [[ ${#APKS[@]} -eq 0 ]]; then
+    c_warn "no APK found in $OUT_DIR, nothing to send"
+  else
+    # Build the caption from the repo state so each post is self-describing.
+    VERSION="$(grep -m1 '^APP_VERSION_NAME=' "$ROOT/gradle.properties" 2>/dev/null | cut -d= -f2)"
+    CODE="$(grep -m1 '^APP_VERSION_CODE=' "$ROOT/gradle.properties" 2>/dev/null | cut -d= -f2)"
+    SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+    SUBJECT="$(git log -1 --pretty=%s 2>/dev/null || true)"
+
+    CAPTION="$(printf '<b>Nagram fork build</b>\nversion: <code>%s</code> (%s)\nbranch: <code>%s</code>\ncommit: <code>%s</code>' \
+      "${VERSION:-?}" "${CODE:-?}" "$BRANCH" "$SHA")"
+    if [[ -n "$SUBJECT" ]]; then
+      CAPTION+="$(printf '\nlast: %s' "$SUBJECT")"
+    fi
+    CAPTION+="$(printf '\nbuilt: %s' "$(date -u '+%Y-%m-%d %H:%M UTC')")"
+
+    c_info "posting ${#APKS[@]} APK(s) to Telegram"
+    if [[ ! -x "$ROOT/scripts/tg-upload.sh" ]]; then
+      c_err "scripts/tg-upload.sh missing"
+    elif ! "$ROOT/scripts/tg-upload.sh" --caption "$CAPTION" "${APKS[@]}"; then
+      c_warn "some uploads failed (see above); build output is still valid"
+    fi
+  fi
 fi
