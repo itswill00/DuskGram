@@ -1,0 +1,28 @@
+[Unit]
+Description=Local Telegram Bot API server (Nagram fork builds)
+Documentation=https://github.com/tdlib/telegram-bot-api
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/root/Nagram/.telegram.env
+Environment=TG_BOT_API_PORT=8081
+Environment=TG_API_ID=11535358
+Environment=TG_API_HASH=33d372962fadb01df47e6ceed4e33cd6
+ExecStartPre=/bin/mkdir -p /root/tg-bot-api/data
+ExecStart=/root/tg-bot-api/install/bin/telegram-bot-api \
+    --api-id=${TG_API_ID} \
+    --api-hash=${TG_API_HASH} \
+    --local \
+    --http-port=${TG_BOT_API_PORT} \
+    --dir=/root/tg-bot-api/data \
+    --log=/tmp/telegram-bot-api.log \
+    --verbosity=1
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
