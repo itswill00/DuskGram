@@ -38,12 +38,21 @@ running() {
   [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null
 }
 
+# the server may be started by systemd instead of this script, so fall back
+# to probing the port rather than trusting our own pid file
+managed_by_systemd() {
+  command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet telegram-bot-api 2>/dev/null
+}
+
 healthy() {
   curl -fsS --max-time 3 "http://127.0.0.1:$PORT/bot${TELEGRAM_BOT_TOKEN:-x}/getMe" >/dev/null 2>&1
 }
 
 do_start() {
   if running && healthy; then c_ok "bot api server already running (port $PORT)"; return 0; fi
+  if managed_by_systemd && healthy; then
+    c_ok "bot api server already running under systemd (port $PORT)"; return 0
+  fi
   [[ -x "$BIN" ]] || { c_err "telegram-bot-api not built at $BIN (run scripts/tg-bot-api-build.sh)"; return 1; }
 
   local api_id="${TG_API_ID:-11535358}"
@@ -71,6 +80,10 @@ do_start() {
 }
 
 do_stop() {
+  if managed_by_systemd; then
+    c_warn "server is managed by systemd; use: systemctl stop telegram-bot-api"
+    return 0
+  fi
   if running; then
     kill "$(cat "$PIDFILE")" 2>/dev/null || true
     for _ in $(seq 1 20); do sleep 0.25; running || break; done
@@ -83,7 +96,10 @@ do_stop() {
 }
 
 do_status() {
-  if running && healthy; then
+  if managed_by_systemd; then
+    if healthy; then c_ok "running under systemd on port $PORT"; else
+      printf '\033[1;33m[!]\033[0m systemd unit active but not responding on port %s\n' "$PORT"; fi
+  elif running && healthy; then
     c_ok "running on port $PORT (pid $(cat "$PIDFILE"))"
   elif running; then
     printf '\033[1;33m[!]\033[0m process alive but not responding on port %s\n' "$PORT"
