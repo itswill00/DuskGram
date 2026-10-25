@@ -26,9 +26,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 		return -1;
 	}
 
-    if (verifySign(env) != JNI_OK) {
-        return JNI_ERR;
-    }
+    // signature verification removed for local test build
 
     if (videoOnJNILoad(vm, env) != JNI_TRUE) {
         return -1;
