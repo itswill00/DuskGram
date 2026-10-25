@@ -76,13 +76,13 @@ public class NekoDebugSettingsActivity extends BaseNekoXSettingsActivity {
     // 切换版本
     private final AbstractConfigCell switchVersionRow = cellGroup.appendCell(new ConfigCellText("SwitchVersion", () -> {
         if (getParentActivity() == null) return;
-        Browser.openUrl(getParentActivity(), "https://github.com/NextAlone/Nagram/releases");
+        Browser.openUrl(getParentActivity(), "https://github.com/itswill00/DuskGram/releases");
     }));
 
     // 检查更新
     private final AbstractConfigCell checkUpdateRow = cellGroup.appendCell(new ConfigCellText("CheckUpdate", () -> {
         if (getParentActivity() == null) return;
-        Browser.openUrl(getParentActivity(), "tg://update");
+        Browser.openUrl(getParentActivity(), "https://t.me/duskgramclient");
     }));
 
     // 自动更新通道

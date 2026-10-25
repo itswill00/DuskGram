@@ -343,6 +343,7 @@ dependencies {
         exclude group: 'androidx.recyclerview', module: "recyclerview"
     }
     implementation 'com.google.zxing:core:3.5.4'
+    implementation 'dnsjava:dnsjava:3.6.4'
     implementation 'com.neovisionaries:nv-websocket-client:2.14'
 
     implementation 'androidx.car.app:app:1.7.0'

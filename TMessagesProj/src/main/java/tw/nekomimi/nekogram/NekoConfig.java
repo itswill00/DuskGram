@@ -145,8 +145,22 @@ public class NekoConfig {
     public static ConfigItem askBeforeCall = addConfig("AskBeforeCalling", configTypeBool, false);
     public static ConfigItem disableNumberRounding = addConfig("DisableNumberRounding", configTypeBool, false);
 
+    // DNS-over-HTTPS selection.
+    // 0 = Telegram default, 1 = NekoX/Nagram resolver, 2 = system resolver,
+    // 3 = user supplied DoH endpoint
+    public static final int DNS_TYPE_DEFAULT = 0;
+    public static final int DNS_TYPE_NAX = 1;
+    public static final int DNS_TYPE_SYSTEM = 2;
+    public static final int DNS_TYPE_CUSTOM_DOH = 3;
+
+    public static ConfigItem dnsType = addConfig("DnsType", configTypeInt, DNS_TYPE_DEFAULT);
+    public static ConfigItem customDoH = addConfig("CustomDoH", configTypeString, "");
+
+    // Upload larger chunks per request; noticeably faster on fast links.
+    public static ConfigItem uploadBoost = addConfig("uploadBoost", configTypeBool, false);
+
+    // deprecated: kept so the old boolean migrates onto dnsType on first run
     public static ConfigItem useSystemDNS = addConfig("useSystemDNS", configTypeBool, false);
-    public static ConfigItem customDoH = addConfig("customDoH", configTypeString, "");
 
     public static ConfigItem disableAppBarShadow = addConfig("DisableAppBarShadow", configTypeBool, false);
     public static ConfigItem mediaPreview = addConfig("MediaPreview", configTypeBool, true);
@@ -178,6 +192,8 @@ public class NekoConfig {
     public static ConfigItem hideGroupSticker = addConfig("hideGroupSticker", configTypeBool, false);
     public static ConfigItem disablePremiumStickerAnimation = addConfig("disablePremiumStickerAnimation", configTypeBool, false);
     public static ConfigItem hideSponsoredMessage = addConfig("hideSponsoredMessage", configTypeBool, false);
+    // Ads are suppressed by default; the switch only exists so it can be re-enabled.
+    public static ConfigItem disableAds = addConfig("DisableAds", configTypeBool, true);
     public static ConfigItem rememberAllBackMessages = addConfig("rememberAllBackMessages", configTypeBool, false);
     public static ConfigItem hideSendAsChannel = addConfig("hideSendAsChannel", configTypeBool, false);
     public static ConfigItem showSpoilersDirectly = addConfig("showSpoilersDirectly", configTypeBool, false);
@@ -460,10 +476,20 @@ public class NekoConfig {
         if (preferences.contains("disableNumberRounding"))
             disableNumberRounding.setConfigBool(preferences.getBoolean("disableNumberRounding", false));
 
-        if (preferences.contains("useSystemDNS"))
+        if (preferences.contains("useSystemDNS")) {
             useSystemDNS.setConfigBool(preferences.getBoolean("useSystemDNS", false));
-        if (preferences.contains("customDoH"))
+            // migrate the removed "use system DNS" checkbox onto dnsType
+            if (useSystemDNS.Bool() && !preferences.contains("DnsType")) {
+                dnsType.setConfigInt(DNS_TYPE_SYSTEM);
+            }
+        }
+        if (preferences.contains("customDoH")) {
             customDoH.setConfigString(preferences.getString("customDoH", ""));
+            // an endpoint already configured implies the custom-DoH resolver
+            if (customDoH.String().isBlank() == false && !preferences.contains("DnsType")) {
+                dnsType.setConfigInt(DNS_TYPE_CUSTOM_DOH);
+            }
+        }
 
         if (preferences.contains("disableAppBarShadow"))
             disableAppBarShadow.setConfigBool(preferences.getBoolean("disableAppBarShadow", false));

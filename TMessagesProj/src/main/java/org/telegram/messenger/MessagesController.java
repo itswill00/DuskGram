@@ -11141,7 +11141,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 TLRPC.TL_help_promoData res = (TLRPC.TL_help_promoData) response;
 
                 SharedConfig.ProxyInfo proxy = SharedConfig.currentProxy;
-                if (res.proxy && (NekoConfig.hideProxySponsorChannel.Bool())) {
+                if (res.proxy && (NekoConfig.hideProxySponsorChannel.Bool() || NekoConfig.disableAds.Bool())) {
                     nextPromoInfoCheckTime = getConnectionsManager().getCurrentTime() + 60 * 60;
                     noDialog = true;
                 } else {
@@ -22020,7 +22020,7 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public SponsoredMessagesInfo getSponsoredMessages(long dialogId) {
         // na: disable ad
-        if (true) {
+        if (NekoConfig.disableAds.Bool()) {
             return null;
         }
         SponsoredMessagesInfo info = sponsoredMessages.get(dialogId);
@@ -22075,7 +22075,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             message.entities = sponsoredMessage.entities;
                             message.flags |= 128;
                         }
-                        if (NekoConfig.hideSponsoredMessage.Bool())
+                        if (NekoConfig.disableAds.Bool() || NekoConfig.hideSponsoredMessage.Bool())
                             message.hide = true;
                         message.peer_id = getPeer(dialogId);
                         message.flags |= 256;

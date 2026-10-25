@@ -5756,7 +5756,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             PrivacyUtil.postCheckAll(getParentActivity(), currentAccount);
         else if (new Random().nextInt(100) < 20) {
             UpdateUtil.postCheckFollowChannel(getParentActivity(), currentAccount);
-            UpdateUtil.postCheckFollowTipsChannel(getParentActivity(), currentAccount);
         }
 
         updateStoriesVisibility(false);

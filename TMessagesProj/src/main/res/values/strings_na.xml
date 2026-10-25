@@ -365,6 +365,17 @@
     <string name="TabStyleStroke">Tab indicator outline</string>
     <string name="AddCommaAfterMention">Add Comma after Mention</string>
     <string name="NagramMessages">Messages</string>
+    <!-- DNS resolver + upload tuning (ported from Nagram XF) -->
+    <string name="DnsType">DNS Resolver</string>
+    <string name="DnsTypeDefault">Telegram default</string>
+    <string name="DnsTypeNax">NekoX resolver</string>
+    <string name="DnsTypeSystem">System</string>
+    <string name="CustomDoH">Custom DoH</string>
+    <string name="CustomDoHHint">https://1.1.1.1/dns-query</string>
+    <string name="uploadBoost">Upload Speed Boost</string>
+    <string name="uploadBoostInfo">Send larger chunks per upload request. Faster on good connections, may use more data.</string>
+    <string name="DisableAds">Disable ads</string>
+    <string name="DisableAdsInfo">Block sponsored messages in channels and bot promo messages.</string>
     <string name="MessagePreviewText">since i want the code to be terrible i am ||vibe-coding||</string>
     <string name="MessagePreviewPollQuestion">How is the code?</string>
     <string name="MessagePreviewPollAnswerTerrible">Terrible</string>

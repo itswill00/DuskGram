@@ -67,6 +67,7 @@ public class NekoExperimentalSettingsActivity extends BaseNekoXSettingsActivity 
     private final CellGroup a = cellGroup = new CellGroup(this);
 
     private final AbstractConfigCell header1 = cellGroup.appendCell(new ConfigCellHeader(LocaleController.getString("Experiment")));
+    private final AbstractConfigCell uploadBoostRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.uploadBoost, LocaleController.getString(R.string.uploadBoostInfo)));
     private final AbstractConfigCell localPremiumRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.localPremium));
 //    private final AbstractConfigCell useSystemEmojiRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.useSystemEmoji));
 //    private final AbstractConfigCell useCustomEmojiRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.useCustomEmoji));
@@ -113,6 +114,7 @@ public class NekoExperimentalSettingsActivity extends BaseNekoXSettingsActivity 
             }, null));
     private final AbstractConfigCell enhancedVideoBitrateRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getEnhancedVideoBitrate()));
     private final AbstractConfigCell hideProxySponsorChannelRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.hideProxySponsorChannel));
+    private final AbstractConfigCell disableAdsRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.disableAds, LocaleController.getString(R.string.DisableAdsInfo)));
     private final AbstractConfigCell hideSponsoredMessageRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.hideSponsoredMessage));
     private final AbstractConfigCell ignoreBlockedRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.ignoreBlocked, LocaleController.getString("IgnoreBlockedAbout")));
     private final AbstractConfigCell regexFiltersEnabledRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getRegexFiltersEnabled()));

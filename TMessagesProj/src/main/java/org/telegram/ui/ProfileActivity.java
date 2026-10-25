@@ -4837,11 +4837,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     updateListAnimated(false);
                 });
                 o.add(R.drawable.msg_retry, LocaleController.getString(R.string.SwitchVersion), () -> {
-                    Browser.openUrl(ProfileActivity.this.getParentActivity(), "https://github.com/NextAlone/Nagram/releases");
+                    Browser.openUrl(ProfileActivity.this.getParentActivity(), "https://github.com/itswill00/DuskGram/releases");
                 });
 
                 o.add(R.drawable.msg_search, LocaleController.getString(R.string.CheckUpdate), () -> {
-                    Browser.openUrl(context, "tg://update");
+                    Browser.openUrl(context, "https://t.me/duskgramclient");
                 });
 
                 String currentChannel = " - ";

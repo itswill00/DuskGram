@@ -18,15 +18,29 @@ object DnsFactory {
     private const val STATUS_NOERROR = 0
     private const val STATUS_NXDOMAIN = 3
 
-    fun providers() = if (NekoConfig.customDoH.String().isNotBlank()) arrayOf(
-        NekoConfig.customDoH.String())
-    else arrayOf(
-        "https://1.1.1.1/dns-query",
-        "https://1.0.0.1/dns-query",
-        "https://[2606:4700:4700::1111]/dns-query",
-        "https://[2606:4700:4700::1001]/dns-query",
-        "https://8.8.8.8/resolve",
-    )
+    /**
+     * DoH endpoints to try, in order. A user supplied endpoint always wins;
+     * otherwise fall back to the Cloudflare/Google set.
+     */
+    fun providers(): Array<String> {
+        val custom = NekoConfig.customDoH.String()
+        if (custom.isNotBlank()) {
+            // accept "1.1.1.1" as well as a full URL
+            return arrayOf(if (custom.startsWith("http")) custom else "https://$custom/dns-query")
+        }
+        return arrayOf(
+            "https://1.1.1.1/dns-query",
+            "https://1.0.0.1/dns-query",
+            "https://[2606:4700:4700::1111]/dns-query",
+            "https://[2606:4700:4700::1001]/dns-query",
+            "https://8.8.8.8/resolve",
+        )
+    }
+
+    /** True when the user asked for plain system resolution. */
+    private fun useSystemResolver() =
+        NekoConfig.dnsType.Int() == NekoConfig.DNS_TYPE_SYSTEM ||
+        NekoConfig.useSystemDNS.Bool()
 
     private val cache = mutableMapOf<String, List<InetAddress>>()
     private val txtCache = mutableMapOf<String, List<String>>()
@@ -37,7 +51,7 @@ object DnsFactory {
     @JvmOverloads
     fun lookup(domain: String, fallback: Boolean = false): List<InetAddress> {
 
-        if (!NekoConfig.useSystemDNS.Bool()) {
+        if (!useSystemResolver()) {
 
             FileLog.d("Lookup $domain")
 

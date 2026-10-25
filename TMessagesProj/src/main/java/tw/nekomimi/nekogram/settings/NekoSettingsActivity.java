@@ -1,7 +1,6 @@
 package tw.nekomimi.nekogram.settings;
 
 import static tw.nekomimi.nekogram.utils.UpdateUtil.channelUsername;
-import static tw.nekomimi.nekogram.utils.UpdateUtil.channelUsernameTips;
 
 import android.app.Activity;
 import android.content.Context;
@@ -69,7 +68,6 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
 
     private int aboutRow;
     private int channelRow;
-    private int channelTipsRow;
     private int sourceCodeRow;
     private int translationRow;
     private int datacenterRow;
@@ -109,10 +107,8 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
             presentFragment(new NekoDebugSettingsActivity());
         } else if (position == channelRow) {
             getMessagesController().openByUserName(channelUsername, this, 1);
-        } else if (position == channelTipsRow) {
-            getMessagesController().openByUserName(channelUsernameTips, this, 1);
         } else if (position == sourceCodeRow) {
-            Browser.openUrl(getParentActivity(), "https://github.com/NextAlone/Nagram");
+            Browser.openUrl(getParentActivity(), "https://github.com/itswill00/DuskGram");
         } else if (position == translationRow) {
             Browser.openUrl(getParentActivity(), "https://xtaolabs.crowdin.com/nagram");
         } else if (position == datacenterRow) {
@@ -173,7 +169,6 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
 
         aboutRow = addRow("about");
         channelRow = addRow("channel");
-        channelTipsRow = addRow("channelTips");
         sourceCodeRow = addRow("sourceCode");
         translationRow = addRow("translation");
         datacenterRow = addRow("datacenter");
@@ -200,8 +195,6 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                     TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
                     if (position == channelRow) {
                         textCell.setTextAndValue(LocaleController.getString(R.string.OfficialChannel), "@" + channelUsername, divider);
-                    } else if (position == channelTipsRow) {
-                        textCell.setTextAndValue(LocaleController.getString(R.string.TipsChannel), "@" + channelUsernameTips, divider);
                     } else if (position == sourceCodeRow) {
                         textCell.setText(LocaleController.getString(R.string.SourceCode), divider);
                     } else if (position == translationRow) {

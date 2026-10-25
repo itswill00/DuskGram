@@ -328,7 +328,7 @@ public static VideoAds make(
         closeDrawable.setColor(Theme.getColor(Theme.key_featuredStickers_addButton, bulletinFactory.getResourcesProvider()));
         layout.buttonView.setImageDrawable(closeDrawable);
         layout.buttonView.setOnClickListener(v -> {
-            if (NekoConfig.hideSponsoredMessage.Bool() || closeDrawable.isCrossAvailable()) {
+            if (NekoConfig.disableAds.Bool() || NekoConfig.hideSponsoredMessage.Bool() || closeDrawable.isCrossAvailable()) {
                 if (bulletin != null) {
                     bulletin.hide();
                 }

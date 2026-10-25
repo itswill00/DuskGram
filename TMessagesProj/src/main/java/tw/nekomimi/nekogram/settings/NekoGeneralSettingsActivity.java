@@ -142,9 +142,15 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
                     LocaleController.getString(R.string.CustomIpStrategyIPV6),
                     LocaleController.getString(R.string.CustomIpStrategyAuto),
             }, null));
-    private final AbstractConfigCell useSystemDNSRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.useSystemDNS));
+    private final AbstractConfigCell dnsTypeRow = cellGroup.appendCell(new ConfigCellSelectBox("DnsType", NekoConfig.dnsType,
+            new String[]{
+                    LocaleController.getString(R.string.DnsTypeDefault),
+                    LocaleController.getString(R.string.DnsTypeNax),
+                    LocaleController.getString(R.string.DnsTypeSystem),
+                    LocaleController.getString(R.string.CustomDoH),
+            }, null));
     private final AbstractConfigCell disableProxyWhenVpnEnabledRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getDisableProxyWhenVpnEnabled()));
-    private final AbstractConfigCell customDoHRow = cellGroup.appendCell(new ConfigCellTextInput(null, NekoConfig.customDoH, "https://1.0.0.1/dns-query", null));
+    private final AbstractConfigCell customDoHRow = cellGroup.appendCell(new ConfigCellTextInput(null, NekoConfig.customDoH, LocaleController.getString(R.string.CustomDoHHint), null));
 //    private final AbstractConfigCell customPublicProxyIPRow = cellGroup.appendCell(new ConfigCellTextDetail(NekoConfig.customPublicProxyIP, (view, position) -> {
 //        customDialog_BottomInputString(position, NekoConfig.customPublicProxyIP, LocaleController.getString("customPublicProxyIPNotice"), "IP");
 //    }, LocaleController.getString("UsernameEmpty", R.string.UsernameEmpty)));

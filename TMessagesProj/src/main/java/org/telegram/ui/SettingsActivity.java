@@ -1502,11 +1502,11 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             listView.adapter.update(true);
         });
         o.add(R.drawable.msg_retry, LocaleController.getString(R.string.SwitchVersion), () -> {
-            Browser.openUrl(getContext(), "https://github.com/NextAlone/Nagram/releases");
+            Browser.openUrl(getContext(), "https://github.com/itswill00/DuskGram/releases");
         });
 
         o.add(R.drawable.msg_search, LocaleController.getString(R.string.CheckUpdate), () -> {
-            Browser.openUrl(getContext(), "tg://update");
+            Browser.openUrl(getContext(), "https://t.me/duskgramclient");
         });
 
         String currentChannel = " - ";
